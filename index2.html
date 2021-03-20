@@ -1,0 +1,1456 @@
+<!DOCTYPE html>
+<html lang="en">
+	<head>
+		<title>three.js webgl - postprocessing - unreal bloom selective</title>
+		<meta charset="utf-8">
+		<meta name="viewport" content="width=device-width, user-scalable=no, minimum-scale=1.0, maximum-scale=1.0">
+		<link type="text/css" rel="stylesheet" href="main.css">
+	</head>
+	<body>
+
+		<!-- <button>click me</button> -->
+		<div id="overlay">
+			<img src="./Group 96.png" alt="">
+			<button id="startButton">Play</button>
+		</div>
+		<script id="vertexShader2" type="x-shader/x-vertex">
+			varying vec2 vUv;
+			varying vec3 vPosition;
+			varying vec3 vNormal;
+			uniform float time;
+			uniform vec2 u_mouse;
+			uniform vec3 color1;
+			uniform vec3 color2;
+			void main() {
+			  vUv = uv;
+			  vNormal = normal;
+			  vPosition = position;
+					  gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+				  }
+		  </script>
+		  <script id="fragmentShader2" type="x-shader/x-fragment">
+			varying vec2 vUv;
+			varying vec3 vPosition;
+			varying vec3 vNormal;
+			uniform float time;
+			uniform vec2 u_mouse;
+			uniform vec3 color1;
+			uniform vec3 color2;
+			
+
+			const float Pi = 100.;
+
+			const int   complexity      = 17;    // More points of color.
+			const float fluid_speed     = 700.0;  // Drives speed, higher number will make it slower.
+			const float color_intensity = 1.1;
+			//
+// Description : Array and textureless GLSL 2D/3D/4D simplex
+//               noise functions.
+//      Author : Ian McEwan, Ashima Arts.
+//  Maintainer : ijm
+//     Lastmod : 20110822 (ijm)
+//     License : Copyright (C) 2011 Ashima Arts. All rights reserved.
+//               Distributed under the MIT License. See LICENSE file.
+//               https://github.com/ashima/webgl-noise
+//
+
+vec4 mod289(vec4 x) {
+	return x - floor(x * (1.0 / 289.0)) * 289.0;
+	}
+	
+	float mod289(float x) {
+	return x - floor(x * (1.0 / 289.0)) * 289.0;
+	}
+	
+	vec4 permute(vec4 x) {
+	return mod289(((x*34.0)+1.0)*x);
+	}
+	
+	float permute(float x) {
+	return mod289(((x*34.0)+1.0)*x);
+	}
+	
+	vec4 taylorInvSqrt(vec4 r)
+	{
+	return 1.79284291400159 - 0.85373472095314 * r;
+	}
+	
+	float taylorInvSqrt(float r)
+	{
+	return 1.79284291400159 - 0.85373472095314 * r;
+	}
+	
+	vec4 grad4(float j, vec4 ip)
+	{
+	const vec4 ones = vec4(1.0, 1.0, 1.0, -1.0);
+	vec4 p,s;
+	
+	p.xyz = floor( fract (vec3(j) * ip.xyz) * 9.0) * ip.z - 1.0;
+	p.w = 0.2 - dot(abs(p.xyz), ones.xyz);
+	s = vec4(lessThan(p, vec4(0.0)));
+	p.xyz = p.xyz*0.5 + (s.xyz*6.0 - 1.0) * s.www;
+	
+	return p;
+	}
+	
+	// (sqrt(5) - 1)/4 = F4, used once below
+	#define F4 0.309016994374947451
+	
+	float snoise(vec4 v)
+	{
+	const vec4  C = vec4( 0.138196601125011,  // (5 - sqrt(5))/20  G4
+	0.276393202250021,  // 2 * G4
+	0.414589803375032,  // 3 * G4
+	-0.447213595499958); // -1 + 4 * G4
+	
+	// First corner
+	vec4 i  = floor(v + dot(v, vec4(F4)) );
+	vec4 x0 = v -   i + dot(i, C.xxxx);
+	
+	// Other corners
+	
+	// Rank sorting originally contributed by Bill Licea-Kane, AMD (formerly ATI)
+	vec4 i0;
+	vec3 isX = step( x0.yzw, x0.xxx );
+	vec3 isYZ = step( x0.zww, x0.yyz );
+	//  i0.x = dot( isX, vec3( 1.0 ) );
+	i0.x = isX.x + isX.y + isX.z;
+	i0.yzw = 1.0 - isX;
+	//  i0.y += dot( isYZ.xy, vec2( 1.0 ) );
+	i0.y += isYZ.x + isYZ.y;
+	i0.zw += 1.0 - isYZ.xy;
+	i0.z += isYZ.z;
+	i0.w += 1.0 - isYZ.z;
+	
+	// i0 now contains the unique values 0,1,2,3 in each channel
+	vec4 i3 = clamp( i0, 0.0, 1.0 );
+	vec4 i2 = clamp( i0-1.0, 0.0, 1.0 );
+	vec4 i1 = clamp( i0-2.0, 0.0, 1.0 );
+	
+	//  x0 = x0 - 0.0 + 0.0 * C.xxxx
+	//  x1 = x0 - i1  + 1.0 * C.xxxx
+	//  x2 = x0 - i2  + 2.0 * C.xxxx
+	//  x3 = x0 - i3  + 3.0 * C.xxxx
+	//  x4 = x0 - 1.0 + 4.0 * C.xxxx
+	vec4 x1 = x0 - i1 + C.xxxx;
+	vec4 x2 = x0 - i2 + C.yyyy;
+	vec4 x3 = x0 - i3 + C.zzzz;
+	vec4 x4 = x0 + C.wwww;
+	
+	// Permutations
+	i = mod289(i);
+	float j0 = permute( permute( permute( permute(i.w) + i.z) + i.y) + i.x);
+	vec4 j1 = permute( permute( permute( permute (
+	i.w + vec4(i1.w, i2.w, i3.w, 1.0 ))
+	+ i.z + vec4(i1.z, i2.z, i3.z, 1.0 ))
+	+ i.y + vec4(i1.y, i2.y, i3.y, 1.0 ))
+	+ i.x + vec4(i1.x, i2.x, i3.x, 1.0 ));
+	
+	// Gradients: 7x7x6 points over a cube, mapped onto a 4-cross polytope
+	// 7*7*6 = 294, which is close to the ring size 17*17 = 289.
+	vec4 ip = vec4(1.0/294.0, 1.0/49.0, 1.0/7.0, 0.0) ;
+	
+	vec4 p0 = grad4(j0,   ip);
+	vec4 p1 = grad4(j1.x, ip);
+	vec4 p2 = grad4(j1.y, ip);
+	vec4 p3 = grad4(j1.z, ip);
+	vec4 p4 = grad4(j1.w, ip);
+	
+	// Normalise gradients
+	vec4 norm = taylorInvSqrt(vec4(dot(p0,p0), dot(p1,p1), dot(p2, p2), dot(p3,p3)));
+	p0 *= norm.x;
+	p1 *= norm.y;
+	p2 *= norm.z;
+	p3 *= norm.w;
+	p4 *= taylorInvSqrt(dot(p4,p4));
+	
+	// Mix contributions from the five corners
+	vec3 m0 = max(0.6 - vec3(dot(x0,x0), dot(x1,x1), dot(x2,x2)), 0.0);
+	vec2 m1 = max(0.6 - vec2(dot(x3,x3), dot(x4,x4)            ), 0.0);
+	m0 = m0 * m0;
+	m1 = m1 * m1;
+	// es amkvetrebs da abacebs kutxeebs
+	return 39.0 * ( dot(m0*m0, vec3( dot( p0, x0 ), dot( p1, x1 ), dot( p2, x2 ))) 
+	+ dot(m1*m1, vec2( dot( p3, x3 ), dot( p4, x4 ) ) ) ) ;
+	
+	}
+			void main() {
+			//	vec3 color1 = vec3(0.149,0.141,0.912);
+			//	vec3 color2 = vec3(1.000,0.833,0.224);
+
+		
+				//	vec3 color3 = vec3(0.,0.157,0.294);
+					vec3 color3 = vec3(0.737,0.231,0.545);
+			vec3 color4 = vec3(0.655,0., 0.455);
+	
+				float pct = abs(sin(time*0.5));
+				vec3 colorMix1 = vec3(0.0);
+				vec3 colorMix2 = vec3(0.0);
+			
+			//	float noisy = snoise(vec4(vPosition*0.18, time*0.7));
+				colorMix1 = mix(color1, color2, vUv.y);
+			//	colorMix2 = mix(color3, color4, vUv.y);
+				vec3 blackColor = vec3(0.0);
+			//	colorMix2 = mix(color3, vec3(noisy,1.3, 1.0), vUv.y);
+			//	colorMix2 = mix(color3, vec3(noisy,0.231,0.545), vUv.y);
+				
+				
+			// vec3 p = vPosition/9.;
+			
+			vec3 p = vec3(vPosition/29.);
+			
+				for(int i=1;i<complexity;i++)
+				{
+					vec3 newp=p + time*0.035;
+				//	newp.x+=0.5/float(i)*sin(float(i)*p.y+time/fluid_speed+20.3*float(i)) + 1.5; // + mouse.y/mouse_factor+mouse_offset;
+					newp.y+=0.5/float(i)*sin(float(i)*p.y+time/fluid_speed+20.3*float(i)) + 1.5; // + mouse.y/mouse_factor+mouse_offset;
+					newp.y+=0.5/float(i)*sin(float(i)*p.x+time/fluid_speed+0.3*float(i+10)) - 0.3; // - mouse.x/mouse_factor+mouse_offset;
+					p=newp;
+				}
+				vec3 col=vec3(color_intensity*sin(3.0*p.x)+color_intensity,color_intensity*sin(3.0*p.y)+color_intensity,color_intensity*sin(p.x+p.y)+color_intensity);
+				
+				colorMix2 = mix(color3, col, vUv.y);	
+
+				gl_FragColor = vec4(mix(colorMix1, colorMix2, pct), 1.0);
+				//gl_FragColor = vec4(noisy);
+			}
+		  </script>
+
+		<script type="x-shader/x-vertex" id="vertexshader">
+
+			varying vec2 vUv;
+
+			void main() {
+
+				vUv = uv;
+
+				gl_Position = projectionMatrix * modelViewMatrix * vec4( position, 1.0 );
+
+			}
+
+		</script>
+
+		<script type="x-shader/x-fragment" id="fragmentshader">
+
+			uniform sampler2D baseTexture;
+			uniform sampler2D bloomTexture;
+
+			varying vec2 vUv;
+
+			void main() {
+
+				gl_FragColor = ( texture2D( baseTexture, vUv ) + vec4( 1.0 ) * texture2D( bloomTexture, vUv ) );
+
+			}
+
+		</script>
+
+
+		<script id="vertexShader3" type="x-shader/x-vertex">
+			varying vec2 vUv;
+			varying vec3 newposition;
+			varying vec3 vNormal;
+			varying float x;
+			varying float y;
+			uniform float time;
+			uniform float random;
+			uniform vec2 u_mouse;
+			uniform vec2 u_resolution;
+			uniform float width;
+			uniform float height;
+			uniform vec3 color1;
+			uniform vec3 color2;
+			void main() {
+			  vUv = uv;
+			  vNormal = normal;
+			  newposition = position;
+			  x = position.x / 250.0;
+			  y = position.y / 250.0;
+	  
+			 // newposition.z += 1.05*sin(newposition.y*20. + random + newposition.x*random*0.05);
+					  gl_Position = projectionMatrix * modelViewMatrix * vec4(newposition, 1.0);
+				  }
+		  </script>
+		  <script id="fragmentShader3" type="x-shader/x-fragment">
+			varying vec2 vUv;
+			varying vec3 newposition;
+			varying vec3 vNormal;
+			varying float x;
+			 varying float y;
+			uniform float time;
+			uniform float random;
+			uniform vec2 u_mouse;
+			uniform vec2 u_resolution;
+			uniform vec3 color1;
+			uniform vec3 color2;
+			float plot(vec2 coord, float pct){
+			  return  smoothstep( pct-0.260, pct, coord.y) -
+					  smoothstep( pct, pct+0.068, coord.y);
+			}
+			void main() {
+			vec2 coord = vUv.xy;
+			vec3 color = vec3(0.0);
+	  
+	  
+	  
+			//color = mix(color1, color2, 2.3 -  vUv.y*1.25);
+			color = mix(color1, color2, 1.7 -  vUv.y*2.5);
+	  
+	  
+			gl_FragColor = vec4(color, 1.0);
+	  
+			
+	  
+	  
+	  
+		
+	  
+			}
+		  </script>
+
+
+
+		  
+		<script id="vertexShader4" type="x-shader/x-vertex">
+			varying vec2 vUv;
+			varying vec3 newposition;
+			varying vec3 vNormal;
+			varying float x;
+			varying float y;
+			uniform float time;
+			uniform float random;
+			uniform vec2 u_mouse;
+			uniform vec2 u_resolution;
+			uniform float width;
+			uniform float height;
+			uniform vec3 color1;
+			uniform vec3 color2;
+			void main() {
+			  vUv = uv;
+			  vNormal = normal;
+			  newposition = position;
+			  x = position.x / 250.0;
+			  y = position.y / 250.0;
+	  
+			 // newposition.z += 1.05*sin(newposition.y*20. + random + newposition.x*random*0.05);
+					  gl_Position = projectionMatrix * modelViewMatrix * vec4(newposition, 1.0);
+				  }
+		  </script>
+		  <script id="fragmentShader4" type="x-shader/x-fragment">
+			varying vec2 vUv;
+			varying vec3 newposition;
+			varying vec3 vNormal;
+			varying float x;
+			 varying float y;
+			uniform float time;
+			uniform float random;
+			uniform vec2 u_mouse;
+			uniform vec2 u_resolution;
+			uniform vec3 color1;
+			uniform vec3 color2;
+			float plot(vec2 coord, float pct){
+			  return  smoothstep( pct-0.260, pct, coord.y) -
+					  smoothstep( pct, pct+0.068, coord.y);
+			}
+			void main() {
+			vec2 coord = vUv.xy;
+			vec3 color = vec3(0.0);
+	  
+	  
+	  
+			//color = mix(color1, color2, 2.3 -  vUv.y*1.25);
+			color = mix(color1, color2, 1.7 -  vUv.y*2.5);
+	  
+	  
+			gl_FragColor = vec4(color, 1.0);
+	  
+			
+	  
+	  
+	  
+		
+	  
+			}
+		  </script>
+		  <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.6.0/gsap.min.js"></script>
+		<script type="module">
+
+			import * as THREE from 'https://threejs.org/build/three.module.js';
+
+			import { GUI } from 'https://threejs.org/examples/jsm/libs/dat.gui.module.js';
+
+			import { OrbitControls } from 'https://threejs.org/examples/jsm/controls/OrbitControls.js';
+			import { EffectComposer } from 'https://threejs.org/examples/jsm/postprocessing/EffectComposer.js';
+			import { RenderPass } from 'https://threejs.org/examples/jsm/postprocessing/RenderPass.js';
+			import { ShaderPass } from 'https://threejs.org/examples/jsm/postprocessing/ShaderPass.js';
+			import { UnrealBloomPass } from 'https://threejs.org/examples/jsm/postprocessing/UnrealBloomPass.js';
+			import { GLTFLoader } from 'https://threejs.org/examples/jsm/loaders/GLTFLoader.js';
+
+			const startButton = document.getElementById( 'startButton' );
+			startButton.addEventListener( 'click', 	setupScene );
+			
+			const ENTIRE_SCENE = 0, BLOOM_SCENE = 1;
+			let analyser;
+			let sizeVal = 0;
+
+			const bloomLayer = new THREE.Layers();
+			bloomLayer.set( BLOOM_SCENE );
+			let sphere;
+			let movableObjs = [];
+			let uniforms2, uniforms3, uniforms4, sphere_a, helper, helper2;
+			let bottle2, bottle3, orbit, pointlight3, mediaElement, directionalLight2, directionalLight1, directionalLight3, directionalLight4, helper3, helper4;
+			const clock = new THREE.Clock();
+			const mouse = new THREE.Vector2();
+			const target = new THREE.Vector2();
+			const windowHalf = new THREE.Vector2( window.innerWidth / 2, window.innerHeight / 2 );
+			const params = {
+				exposure: 1,
+				bloomStrength: 0.5,
+				bloomThreshold: 0,
+				bloomRadius: 0,
+				scene: "Scene only"
+			};
+
+			const darkMaterial = new THREE.MeshBasicMaterial( { color: "black" } );
+			const materials = {};
+
+			const renderer = new THREE.WebGLRenderer( { antialias: true } );
+			renderer.setPixelRatio( window.devicePixelRatio );
+			renderer.setSize( window.innerWidth, window.innerHeight );
+			renderer.toneMapping = THREE.ReinhardToneMapping;
+			renderer.shadowMap.enabled = true;
+			renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+			document.body.appendChild( renderer.domElement );
+
+			const scene = new THREE.Scene();
+
+			const camera = new THREE.PerspectiveCamera( 40, window.innerWidth / window.innerHeight, 1, 200 );
+			// camera.position.set( 0, 0, 20 );
+			camera.position.set(0, 0.6, -28);
+			camera.position.z = 25;
+			camera.lookAt( 0, 0, 0 );
+
+			const controls = new OrbitControls( camera, renderer.domElement );
+			controls.maxPolarAngle = Math.PI * 0.5;
+			controls.minDistance = 1;
+			controls.maxDistance = 30;
+			controls.enablePan = false;
+			controls.enableZoom = true;
+			controls.minPolarAngle = (Math.PI / 2) - 0.1; // radians
+		  		controls.maxPolarAngle = (Math.PI / 2) - 0.1; // radians
+			controls.target.set(0,0,0);
+			controls.enableDamping = true;
+			//controls.dampingFactor =  0.05;
+			controls.dampingFactor =  0.01;
+			
+			controls.addEventListener( 'change', render );
+			controls.update();	
+			// scene.add( new THREE.AmbientLight( 0x404040, 1 ) );
+
+			// const light = new THREE.AmbientLight( 0xc30037, 5 ); // soft white light
+			// scene.add( light );
+
+			const renderScene = new RenderPass( scene, camera );
+
+			const bloomPass = new UnrealBloomPass( new THREE.Vector2( window.innerWidth, window.innerHeight ), 1.5, 0.4, 0.85 );
+			bloomPass.threshold = params.bloomThreshold;
+			bloomPass.strength = params.bloomStrength;
+			bloomPass.radius = params.bloomRadius;
+
+			const bloomComposer = new EffectComposer( renderer );
+			bloomComposer.renderToScreen = false;
+			bloomComposer.addPass( renderScene );
+			bloomComposer.addPass( bloomPass );
+
+			const finalPass = new ShaderPass(
+				new THREE.ShaderMaterial( {
+					uniforms: {
+						baseTexture: { value: null },
+						bloomTexture: { value: bloomComposer.renderTarget2.texture }
+					},
+					vertexShader: document.getElementById( 'vertexshader' ).textContent,
+					fragmentShader: document.getElementById( 'fragmentshader' ).textContent,
+					defines: {}
+				} ), "baseTexture"
+			);
+			finalPass.needsSwap = true;
+
+			const finalComposer = new EffectComposer( renderer );
+			finalComposer.addPass( renderScene );
+			finalComposer.addPass( finalPass );
+
+			const raycaster = new THREE.Raycaster();
+
+
+			// window.addEventListener( 'pointerdown', onPointerDown );
+			// window.addEventListener( 'mousemove', onPointerDown );
+
+
+			var colorparams = {
+               
+              //  lightcolor: 0xc30037,  
+                lightcolor: 0xdd0006,  // ცისფერი
+				lightcolor2: 0x21f5e3, // წითელი
+				intensity: 7,
+				intensity2: 7,
+				intensity3: 1.2,
+				intensity4: 1.2,
+				showFront: false,
+				showFront2: false,
+            };
+
+			const gui = new GUI();
+
+				// gui.add(pointLight, 'intensity').min(0.0).max(10.0).step(0.1);
+				gui.add( colorparams, 'showFront' ).name( 'წინა და უკანა განათება და ჰელფერები' ).onChange(function (e) {
+					directionalLight4.visible = !directionalLight4.visible;
+					directionalLight3.visible = !directionalLight3.visible;
+					helper4.visible = !helper4.visible;
+					helper3.visible = !helper3.visible;
+       			 });
+					gui.add( colorparams, 'showFront2' ).name( 'გვერდების ჰელფერები' ).onChange(function (e) {
+				
+					helper.visible = !helper.visible;
+					helper2.visible = !helper2.visible;
+       			 });
+				gui.add(colorparams, 'intensity', 0, 50).name('მარჯვენა-intensity').onChange(function (e) {
+					directionalLight1.intensity = e;
+			
+       			 });
+			
+				gui.add(colorparams, 'intensity', 0, 50).name('მარცხენა-intensity').onChange(function (e) {
+            directionalLight2.intensity = e;
+           
+       			 });
+			// 		gui.add(colorparams, 'intensity', 0, 50).name('წინა-intensity').onChange(function (e) {
+           
+            // directionalLight4.intensity4 = e;
+       		// 	 });
+
+			// 		gui.add(colorparams, 'intensity', 0, 50).name('უკანა-intensity').onChange(function (e) {
+				
+			// 	directionalLight3.intensity3 = e;
+			// 	});
+				var colorFolder = gui.addFolder('Light Colour');
+			
+
+				
+				colorFolder.addColor( colorparams, 'lightcolor' )
+                .name('მარჯვენა-light')
+                .listen()
+                .onChange( function() { 
+					directionalLight1.color.set( colorparams.lightcolor); 
+					directionalLight3.color.set( colorparams.lightcolor); 
+				} );  
+				
+				colorFolder.addColor( colorparams, 'lightcolor2' )
+                .name('მარცხენა-light')
+                .listen()
+                .onChange( function() { 
+					directionalLight2.color.set( colorparams.lightcolor2);  
+					directionalLight4.color.set( colorparams.lightcolor2);  
+				
+				
+				} );  
+            colorFolder.open();
+		
+			render();
+
+
+			// const folder = gui.addFolder( 'Bloom Parameters' );
+
+			// folder.add( params, 'exposure', 0.1, 2 ).onChange( function ( value ) {
+
+			// 	renderer.toneMappingExposure = Math.pow( value, 4.0 );
+			// 	render();
+
+			// } );
+
+			// folder.add( params, 'bloomThreshold', 0.0, 1.0 ).onChange( function ( value ) {
+
+			// 	bloomPass.threshold = Number( value );
+			// 	render();
+
+			// } );
+
+			// folder.add( params, 'bloomStrength', 0.0, 10.0 ).onChange( function ( value ) {
+
+			// 	bloomPass.strength = Number( value );
+			// 	render();
+
+			// } );
+
+			// folder.add( params, 'bloomRadius', 0.0, 1.0 ).step( 0.01 ).onChange( function ( value ) {
+
+			// 	bloomPass.radius = Number( value );
+			// 	render();
+
+			// } );
+
+		
+
+			// function onPointerDown( event ) {
+
+			// 	event.preventDefault();
+
+			// 	mouse.x = ( event.clientX / window.innerWidth ) * 2 - 1;
+			// 	mouse.y = - ( event.clientY / window.innerHeight ) * 2 + 1;
+
+			// 	raycaster.setFromCamera( mouse, camera );
+			// 	const intersects = raycaster.intersectObjects( scene.children );
+			// 	if ( intersects.length > 0 ) {
+
+			// 		const object = intersects[ 0 ].object;
+			// 		// object.layers.toggle( BLOOM_SCENE );
+			// 			object.layers.enable( BLOOM_SCENE );
+			// 		render();
+
+			// 	}
+
+			// }
+
+			window.onresize = function () {
+
+				const width = window.innerWidth;
+				const height = window.innerHeight;
+
+				camera.aspect = width / height;
+				camera.updateProjectionMatrix();
+
+				renderer.setSize( width, height );
+
+				bloomComposer.setSize( width, height );
+				finalComposer.setSize( width, height );
+				windowHalf.set( width / 2, height / 2 );
+
+				render();
+
+			};
+
+			function setupScene() {
+				const overlay = document.getElementById( 'overlay' );
+				overlay.remove();
+				scene.traverse( disposeMaterial );
+				scene.children.length = 0;
+			
+					
+				
+				const listener = new THREE.AudioListener();
+
+				const audio = new THREE.Audio( listener );
+				const file = './talk2.mp3';
+
+				if ( /(iPad|iPhone|iPod)/g.test( navigator.userAgent ) ) {
+
+					const loader = new THREE.AudioLoader();
+					loader.load( file, function ( buffer ) {
+						// audio.setRefDistance( 2000 );
+						audio.setBuffer( buffer );
+					
+					
+					audio.play();
+					
+				
+		
+			
+					
+					
+					} );
+
+				} else {
+
+					mediaElement = new Audio( file );
+				
+					audio.setMediaElementSource( mediaElement );
+				
+				
+				
+						mediaElement.play();
+				
+					
+			
+
+			
+					
+
+					
+
+				}
+				audio.hasPlaybackControl = true;
+			
+				
+				analyser = new THREE.AudioAnalyser( audio, 32768 );
+			
+				
+
+			// function playSound() {
+			// 	audioLoader.load("clips/theme_80.mp3", function(buffer) {
+			// 		sound.setBuffer( buffer );
+			// 		sound.setRefDistance( 20 );
+			// 		sound.play();
+			// 	});
+
+			// 	var source = listener.context.createBufferSource();
+			// 	source.connect(listener.context.destination);
+			// 	source.start();
+			// 	}
+			// 	window.addEventListener('touchstart', playSound);
+			// 	document.addEventListener('click', playSound);
+
+				// setInterval(() => {
+				// 	// console.log(Math.max(...analyser.data))
+				// 	console.log(sizeVal)
+				// 	// sizeVal = Math.max(...analyser.data);
+				
+				// 	// console.log(analyser)
+				// }, 1000);
+
+				
+
+				
+
+
+
+
+				const geometry = new THREE.SphereGeometry( 0.2, 32, 32 );
+				uniforms3 = {
+						time: {value: 0},
+						u_mouse: { type: "v2", value: new THREE.Vector2() },
+						u_resolution: { type: "v2", value: new THREE.Vector2() },
+						color1: { type: "c", value: new THREE.Color(0xFFD225)  },
+						color2: { type: "c", value: new THREE.Color(0xff760f)  },
+						width: {
+							type: "f",
+							value: window.innerWidth
+						},
+						height: {
+							type: "f",
+							value: window.innerHeight
+						},
+						random: {
+						value: Math.random()*2.5
+						}
+						};
+				for ( let i = 0; i < 150; i ++ ) {
+					
+					// const color = new THREE.Color();
+					// color.setHSL( Math.random(), 0.8, Math.random() * 0.2 + 0.05 );
+
+					const material = new THREE.ShaderMaterial({
+          side: THREE.DoubleSide,
+          uniforms: uniforms3,
+          vertexShader: document.getElementById("vertexShader3").textContent,
+          fragmentShader: document.getElementById("fragmentShader3").textContent,
+        });
+					
+					sphere = new THREE.Mesh( geometry, material );
+			// // numbers between 20-60		Math.random() * (60 - 20) + 20;
+			// 		sphere.position.x = -Math.floor(Math.random() * 6) + 100; 
+			// 		sphere.position.y = Math.floor(Math.random() * 20); 
+			// 		sphere.position.z = Math.random() * 30;
+			// 		sphere.position.normalize().multiplyScalar( Math.random() * 400 );
+			// 		// sphere.scale.setScalar( Math.random() * Math.random() + 0.5 );
+			
+			sphere.position.x = Math.random() * 10 - 5;
+					sphere.position.y = Math.random() * 10 - 5;
+					sphere.position.z = Math.random() * 10 - 5;
+					sphere.position.normalize().multiplyScalar( Math.random() * 30.0 + 8.0 );
+					sphere.scale.setScalar( Math.random() * Math.random() + 0.5 );
+					sphere.castShadow = false; //default is false
+					sphere.receiveShadow = false; //default
+					// sphere.material.specular.setHex(0x000000);
+					scene.add( sphere );
+					movableObjs.push(sphere);
+					// console.log(movableObjs)
+					// console.log(scene.children)
+					sphere.layers.enable( BLOOM_SCENE );
+
+				}
+
+
+
+
+				
+				const geometry_a = new THREE.SphereGeometry( 0.2, 32, 32 );
+				uniforms4 = {
+						time: {value: 0},
+						u_mouse: { type: "v2", value: new THREE.Vector2() },
+						u_resolution: { type: "v2", value: new THREE.Vector2() },
+						color1: { type: "c", value: new THREE.Color(0xff2596)  },
+						color2: { type: "c", value: new THREE.Color(0x57063d)  },
+						width: {
+							type: "f",
+							value: window.innerWidth
+						},
+						height: {
+							type: "f",
+							value: window.innerHeight
+						},
+						random: {
+						value: Math.random()*2.5
+						}
+						};
+				for ( let i = 0; i < 150; i ++ ) {
+					
+					// const color = new THREE.Color();
+					// color.setHSL( Math.random(), 0.8, Math.random() * 0.2 + 0.05 );
+
+					const material_a = new THREE.ShaderMaterial({
+          side: THREE.DoubleSide,
+          uniforms: uniforms4,
+          vertexShader: document.getElementById("vertexShader4").textContent,
+          fragmentShader: document.getElementById("fragmentShader4").textContent,
+        });
+					
+					sphere_a = new THREE.Mesh( geometry_a, material_a );
+			// // numbers between 20-60		Math.random() * (60 - 20) + 20;
+			// 		sphere.position.x = -Math.floor(Math.random() * 6) + 100; 
+			// 		sphere.position.y = Math.floor(Math.random() * 20); 
+			// 		sphere.position.z = Math.random() * 30;
+			// 		sphere.position.normalize().multiplyScalar( Math.random() * 400 );
+			// 		// sphere.scale.setScalar( Math.random() * Math.random() + 0.5 );
+			
+			sphere_a.position.x = Math.random() * 10 - 5;
+					sphere_a.position.y = Math.random() * 10 - 5;
+					sphere_a.position.z = Math.random() * 10 - 5;
+					sphere_a.position.normalize().multiplyScalar( Math.random() * 30.0 + 8.0 );
+					sphere_a.scale.setScalar( Math.random() * Math.random() + 0.5 );
+					sphere_a.castShadow = false; //default is false
+					sphere_a.receiveShadow = false; //default
+					// sphere.material.specular.setHex(0x000000);
+					scene.add( sphere_a );
+					movableObjs.push(sphere_a);
+					// console.log(movableObjs)
+					// console.log(scene.children)
+					sphere_a.layers.enable( BLOOM_SCENE );
+
+				}
+
+				// var radius = 10;
+				// var turns = 3;
+				// var objPerTurn = 30;
+
+				// var angleStep = (Math.PI * 2) / objPerTurn;
+				// var heightStep = 0.5;
+
+				// var geom = new THREE.SphereGeometry(0.5, 50, 50);
+
+				// for (let i = 0; i < turns * objPerTurn; i++) {
+				// let plane = new THREE.Mesh(geom, new THREE.MeshBasicMaterial({
+				// 	color: Math.random() * 0x888888 + 0x888888
+				// }));
+
+				// // position
+				// plane.position.set(
+				// 	Math.cos(angleStep * i) * radius,
+				// 	heightStep * i,
+				// 	Math.sin(angleStep * i) * radius
+				// );
+
+				// // rotation
+				// plane.rotation.y = -angleStep * i;
+
+				// scene.add(plane);
+				// plane.layers.enable( BLOOM_SCENE );
+				// }
+
+				// aq 80, 80, 200 iyo
+				var geometryplane = new THREE.SphereGeometry(25, 25, 200);
+
+						uniforms2 = {
+						time: {value: 0},
+						u_mouse: { type: "v2", value: new THREE.Vector2() },
+						color1: { type: "c", value: new THREE.Color(0x2523e8)  },
+						color2: { type: "c", value: new THREE.Color(0xffd439)  },
+						};
+
+						var materialplane = new THREE.ShaderMaterial({
+						// side: THREE.DoubleSide,
+						side: THREE.BackSide,
+						uniforms: uniforms2,
+						vertexShader: document.getElementById("vertexShader2").textContent,
+						fragmentShader: document.getElementById("fragmentShader2").textContent,
+						});
+
+						var mesh2 = new THREE.Mesh(geometryplane, materialplane);
+						scene.add(mesh2);
+						const light = new THREE.AmbientLight( 0xffffff); // soft white light
+						scene.add( light );
+
+						directionalLight1 = new THREE.DirectionalLight( 0xe40340, 25.3 );
+						directionalLight1.position.set( 14, 2, -3 );
+					scene.add( directionalLight1 );
+
+			
+
+
+					// const pointlight = new THREE.PointLight(0x0000cc, 21, 2200);
+					// pointlight.position.set(0, 0.6, -10);
+					// scene.add(pointlight);
+
+					// const pointlight2 = new THREE.PointLight(0x0000cc, 21, 2200);
+					// pointlight2.position.set(0, 10, -10);
+					// scene.add(pointlight2);
+
+					// pointlight3 = new THREE.PointLight(0xcc00cc, 21, 2200);
+					// pointlight3.position.set(-10, 0, 10);
+					// scene.add(pointlight3);
+
+					// const pointlight4 = new THREE.PointLight(0xcc00cc, 21, 2200);
+					// pointlight4.position.set(10, 0, 10);
+					// scene.add(pointlight4);
+
+
+
+					directionalLight2 = new THREE.DirectionalLight(0x04b8f5, 25.3);
+				//	directionalLight2.position.set(-18, 2, 3);
+				directionalLight2.position.set(-18, 2, 3);
+				
+					scene.add(directionalLight2);
+
+
+
+				directionalLight3 = new THREE.DirectionalLight( 0xdd0006, 3.2 );
+						directionalLight3.position.set( 0, 2, -13 );
+					scene.add( directionalLight3 );
+
+			
+
+
+					
+					directionalLight4 = new THREE.DirectionalLight(0x21f5e3, 3.2);
+					directionalLight4.position.set(0, 2, 13);
+
+					scene.add(directionalLight4);
+
+				
+					
+// 					const HemisphereLight = new THREE.HemisphereLight(0x04b8f5,0xe40340, 15.5);
+// 					HemisphereLight.position.set(-20, -1, 3);
+					
+
+// 					scene.add(HemisphereLight);
+
+// 					const HemisphereLighthelper = new THREE.HemisphereLightHelper( HemisphereLight, 5 );
+// scene.add( HemisphereLighthelper );
+			
+			
+
+				
+				
+		
+
+					const sphereSize = 1;
+			
+				
+		
+
+					helper = new THREE.DirectionalLightHelper( directionalLight1, 5 );
+						scene.add( helper );
+
+					helper2 = new THREE.DirectionalLightHelper( directionalLight2, 5 );
+						scene.add( helper2 );
+
+
+
+						helper3 = new THREE.DirectionalLightHelper( directionalLight3, 5 );
+						scene.add( helper3 );
+
+					helper4 = new THREE.DirectionalLightHelper( directionalLight4, 5 );
+						scene.add( helper4 );
+
+
+						if(!colorparams.showFront){
+				directionalLight4.visible = false;
+				directionalLight3.visible = false;
+				helper4.visible = false;
+				helper3.visible = false;
+			} else {
+				directionalLight4.visible = true;
+				directionalLight3.visible = true;
+				helper4.visible = true;
+				helper3.visible = true;
+			}
+
+			if(!colorparams.showFront2){
+			
+				helper.visible = false;
+				helper2.visible = false;
+			} else {
+		
+				helper.visible = true;
+				helper2.visible = true;
+			}
+
+
+// 					const spheregeometry = new THREE.SphereGeometry( 5, 72, 72 );
+// const spherematerial = new THREE.MeshLambertMaterial( {color: 0xffff00} );
+// const spheresphere = new THREE.Mesh( spheregeometry, spherematerial );
+// scene.add( spheresphere );
+// spheresphere.position.set(-2.7, -8.4, 0)
+						const loader = new GLTFLoader().setPath("./glbbottle/");
+							loader.load("scene.glb", function (gltf) {
+								bottle2 = gltf.scene;
+								bottle2.rotation.y = -5.2;
+								bottle2.position.y = -8.4;
+								bottle2.position.x = -2.7;
+								bottle2.receiveShadow = false;
+								bottle2.traverse(function (child) {
+								if (child.isMesh) {
+									child.receiveShadow = false;
+									child.castShadow = false;
+								}
+								});
+								bottle2.scale.set(50,50,50);
+								scene.add(bottle2);
+								console.log(bottle2)
+								render();
+							});
+
+							loader.load("scene.glb", function (gltf) {
+								bottle3 = gltf.scene;
+								bottle3.rotation.y = -0.1;
+								bottle3.rotation.z = -0.2;
+
+
+								bottle3.position.y = -8.3;
+								bottle3.position.z = -2.7;
+
+								
+								bottle3.position.x = 1.2 - 2.7;
+								bottle3.traverse(function (child) {
+								if (child.isMesh) {
+								}
+								});
+								bottle3.scale.set(50,50,50);
+								scene.add(bottle3);
+								// console.log(bottle3)
+								
+							});
+							console.log(uniforms3.color1.value.g)
+				render();
+				animate();
+
+			}
+
+			// document.addEventListener('mousemove', function(e){
+    		// 	// let scale = -0.01;
+			// 	// 	orbit.rotateY( e.movementX / 500 );
+			// 	// // orbit.rotateX( e.movementY * scale ); 
+			// 	// orbit.rotation.z = 0; //this is important to keep the camera level..
+			// 	// camera.position.x = e.movementX / 900;
+			// 	// camera.updateProjectionMatrix();
+			// 	mouse.x = ( e.clientX - windowHalf.x );
+			// 	mouse.y = ( e.clientY - windowHalf.y );
+				
+			// 	})
+				
+				// //the camera rotation pivot
+				// orbit = new THREE.Object3D();
+				// orbit.rotation.order = "YXZ"; //this is important to keep level, so Z should be the last axis to rotate in order...
+				// if(bottle2) orbit.position.copy( bottle2.position );
+				// scene.add(orbit );
+				// orbit.add( camera );
+
+
+
+
+			function disposeMaterial( obj ) {
+
+				if ( obj.material ) {
+
+					obj.material.dispose();
+
+				}
+
+			}
+
+			function render() {
+				const time = Date.now() * 0.0001;
+				
+				switch ( params.scene ) {
+
+					case 'Scene only':
+						renderer.render( scene, camera );
+						break;
+					case 'Glow only':
+						renderBloom( false );
+						break;
+					case 'Scene with Glow':
+					default:
+						// render scene with bloom
+						renderBloom( true );
+
+						// render the entire scene, then render bloom scene on top
+						finalComposer.render();
+						break;
+
+				}
+				// pointlight3.position.x = Math.cos( time * 20.7 ) * 285;
+				for (let i = 0; i < movableObjs.length; i++) {
+			
+					// const sphere = movableObjs[ i ];
+					// sphere.position.x = Math.cos( time + i * 100.7 ) * 11;
+					// sphere.position.y = Math.sin( time + i * 3.1 ) * 11;
+					// sphere.position.z = Math.sin( time + i * 1.1 ) * 15;
+			
+					
+				}
+			
+				
+
+			}
+
+			function renderBloom( mask ) {
+
+				if ( mask === true ) {
+
+					scene.traverse( darkenNonBloomed );
+					bloomComposer.render();
+					scene.traverse( restoreMaterial );
+
+				} else {
+
+					camera.layers.set( BLOOM_SCENE );
+					bloomComposer.render();
+					camera.layers.set( ENTIRE_SCENE );
+
+				}
+
+			}
+
+			function darkenNonBloomed( obj ) {
+
+				if ( obj.isMesh && bloomLayer.test( obj.layers ) === false ) {
+
+					materials[ obj.uuid ] = obj.material;
+					obj.material = darkMaterial;
+
+				}
+
+			}
+
+			function restoreMaterial( obj ) {
+
+				if ( materials[ obj.uuid ] ) {
+
+					obj.material = materials[ obj.uuid ];
+					delete materials[ obj.uuid ];
+
+				}
+
+			}
+			var animate = function () {
+        requestAnimationFrame(animate);
+		if(analyser)	analyser.getFrequencyData();
+				// sphere.rotation.x += 50;
+				// target.x = ( 1 - mouse.x ) * 0.0001;
+				// target.y = ( 1 - mouse.y ) * 0.0001;
+				
+				// camera.rotation.x += 0.13 * ( target.y - camera.rotation.x );
+				// camera.rotation.y += 0.13 * ( target.x - camera.rotation.y );
+
+				uniforms2.time.value += clock.getDelta();
+			
+			//	if(analyser)	sizeVal = Math.max(...analyser.data) / 80;
+			//if(analyser)	sizeVal = analyser.data;
+			const sum = analyser.data.reduce((a, b) => a + b, 0);
+			const avg = (sum / analyser.data.length) || 0;
+				if(analyser) sizeVal = avg / 15;
+
+			
+				
+
+
+				if(sizeVal > 4.7){
+			
+			// uniforms4.color1.value = new THREE.Color(0xff2596);
+			// uniforms4.color2.value = new THREE.Color(0x57063d);
+					uniforms3.color1.value = new THREE.Color(0xFFD225 );
+			uniforms3.color2.value = new THREE.Color(0xff760f);
+		}
+
+			else	if(sizeVal < 4.1 && sizeVal > 4.4){
+			
+			// uniforms4.color1.value = new THREE.Color(0xff2596);
+			// uniforms4.color2.value = new THREE.Color(0x57063d);
+					uniforms3.color1.value = new THREE.Color(0xFFD225 );
+			uniforms3.color2.value = new THREE.Color(0xff760f);
+		}
+
+
+			else if(sizeVal < 3.8 && sizeVal > 3.5){
+			
+			// uniforms4.color1.value = new THREE.Color(0xff2596);
+			// uniforms4.color2.value = new THREE.Color(0x57063d);
+					uniforms3.color1.value = new THREE.Color(0xFFD225 );
+			uniforms3.color2.value = new THREE.Color(0xff760f);
+		}
+
+
+
+
+
+				
+		
+		else if(sizeVal < 3.18 && sizeVal > 3.15){
+			
+			// uniforms4.color1.value = new THREE.Color(0xff2596);
+			// uniforms4.color2.value = new THREE.Color(0x57063d);
+					uniforms3.color1.value = new THREE.Color(0xFFD225 );
+			uniforms3.color2.value = new THREE.Color(0xff760f);
+		}
+
+			else	if(sizeVal < 2.9 && sizeVal > 2.8){
+			
+					uniforms4.color1.value = new THREE.Color(0xff2596);
+					uniforms4.color2.value = new THREE.Color(0x57063d);
+							uniforms3.color1.value = new THREE.Color(0xFFD225 );
+					uniforms3.color2.value = new THREE.Color(0xff760f);
+				} 
+				
+		
+			else if(sizeVal < 2.3 && sizeVal > 2.1){
+				uniforms3.color1.value = new THREE.Color(0xFFD225 );
+					uniforms3.color2.value = new THREE.Color(0xff760f);
+				
+					
+				}
+				else if(sizeVal < 1.9 && sizeVal > 1.8){
+					uniforms4.color1.value = new THREE.Color(0xff2596);
+					uniforms4.color2.value = new THREE.Color(0x57063d);
+					// 		uniforms3.color1.value = new THREE.Color(0xFFD225 );
+					// uniforms3.color2.value = new THREE.Color(0xff760f);
+				}
+				
+			
+
+				else if(sizeVal < 1.5 && sizeVal > 1.4){
+					uniforms4.color1.value = new THREE.Color(0xff2596);
+					uniforms4.color2.value = new THREE.Color(0x57063d);
+					// 		uniforms3.color1.value = new THREE.Color(0xFFD225 );
+					// uniforms3.color2.value = new THREE.Color(0xff760f);
+				}
+
+			
+				else if(sizeVal < 0.8 && sizeVal > 0.7){
+					uniforms4.color1.value = new THREE.Color(0xff2596);
+					uniforms4.color2.value = new THREE.Color(0x57063d);
+					// 		uniforms3.color1.value = new THREE.Color(0xFFD225 );
+					// uniforms3.color2.value = new THREE.Color(0xff760f);
+				}
+
+				else if(sizeVal < 0.3 && sizeVal > 0.2){
+					uniforms4.color1.value = new THREE.Color(0xff2596);
+					uniforms4.color2.value = new THREE.Color(0x57063d);
+					// 		uniforms3.color1.value = new THREE.Color(0xFFD225 );
+					// uniforms3.color2.value = new THREE.Color(0xff760f);
+				}
+
+				else if(sizeVal < 0.0 && sizeVal > 0.03){
+					uniforms4.color1.value = new THREE.Color(0xff2596);
+					uniforms4.color2.value = new THREE.Color(0x57063d);
+					// 		uniforms3.color1.value = new THREE.Color(0xFFD225 );
+					// uniforms3.color2.value = new THREE.Color(0xff760f);
+				}
+
+			
+				
+
+
+				
+
+
+				
+			
+				
+				else{
+					gsap.to(uniforms4.color1.value, {
+						duration: 0.7,
+						// value: new THREE.Color(0x5c5c5c),
+						r: 0.376,
+						g: 0.294,
+						b: 0.412,
+					
+						onUpdate: function() {
+					// camera.updateProjectionMatrix;
+					// controls.update();
+					
+					}
+										
+					})
+
+					gsap.to(uniforms4.color2.value, {
+						duration: 0.7,
+						r: 0.169,
+						g: 0.169,
+						b: 0.169,
+					
+						onUpdate: function() {
+					// camera.updateProjectionMatrix;
+					// controls.update();
+					
+					}
+										
+					})
+
+					gsap.to(uniforms3.color1.value, {
+						duration: 0.7,
+						r: 0.361,
+						g: 0.361,
+						b: 0.02,
+					
+						onUpdate: function() {
+					// camera.updateProjectionMatrix;
+					// controls.update();
+					
+					}
+										
+					})
+
+					gsap.to(uniforms3.color2.value, {
+						duration: 0.7,
+						r: 0.169,
+						g: 0.169,
+						b: 0.169,
+					
+						onUpdate: function() {
+					// camera.updateProjectionMatrix;
+					// controls.update();
+					
+					}
+										
+					})
+		
+
+
+
+
+					// uniforms4.color1.value = new THREE.Color(0x5c5c5c);
+					// uniforms4.color2.value = new THREE.Color(0x2b2b2b);
+						// uniforms3.color1.value = new THREE.Color(0x5c5c5c);
+					// uniforms3.color2.value = new THREE.Color(0x2b2b2b);
+				}
+
+				// setInterval(() => {
+				// 	gsap.to(uniforms2.color1.value, {
+				// 		duration: 1.8,
+				// 		r: 0.655,
+				// 		g: 0.,
+				// 		b: 0.455,
+					
+					
+				// 		onUpdate: function() {
+				// 	// camera.updateProjectionMatrix;
+				// 	// controls.update();
+					
+				// 	}
+										
+				// 	})
+
+				// 	gsap.to(uniforms2.color2.value, {
+				// 		duration: 1.8,
+				// 		r: 0.,
+				// 		g: 0.157,
+				// 		b: 0.294,
+					
+				// 		onUpdate: function() {
+				// 	// camera.updateProjectionMatrix;
+				// 	// controls.update();
+					
+				// 	}
+										
+				// 	})
+				// }, 2000);
+
+				// setInterval(() => {
+				// 	gsap.to(uniforms2.color1.value, {
+				// 		duration: 1.8,
+				// 					r: 0.145,
+				// 		g: 0.137,
+				// 		b: 0.91,
+					
+					
+				// 		onUpdate: function() {
+				// 	// camera.updateProjectionMatrix;
+				// 	// controls.update();
+					
+				// 	}
+										
+				// 	})
+
+				// 	gsap.to(uniforms2.color2.value, {
+				// 		duration: 1.8,
+				// 				r: 1.000,
+				// 		g: 0.831,
+				// 		b: 0.224,
+					
+				// 		onUpdate: function() {
+				// 	// camera.updateProjectionMatrix;
+				// 	// controls.update();
+					
+				// 	}
+										
+				// 	})
+				// }, 3000);
+
+
+
+				
+				// if(sizeVal < 3.4 && sizeVal > 2.4){
+					
+				// 			uniforms2.color1.value = new THREE.Color(0xe62aec );
+				// 	uniforms2.color2.value = new THREE.Color(0x51a7d9);
+					
+				// } 
+				// else if(sizeVal < 2.1 && sizeVal > 1.6){
+					
+				// 			uniforms2.color1.value = new THREE.Color(0xa70074 );
+				// 	uniforms2.color2.value = new THREE.Color(0x00284b);
+					
+				// } 
+			
+				// else {
+				// 				gsap.to(uniforms2.color1.value, {
+				// 		duration: 1.8,
+				// 		r: 0.145,
+				// 		g: 0.137,
+				// 		b: 0.91,
+					
+					
+				// 		onUpdate: function() {
+				// 	// camera.updateProjectionMatrix;
+				// 	// controls.update();
+					
+				// 	}
+										
+				// 	})
+
+				// 	gsap.to(uniforms2.color2.value, {
+				// 		duration: 1.8,
+				// 		r: 1.000,
+				// 		g: 0.831,
+				// 		b: 0.224,
+					
+				// 		onUpdate: function() {
+				// 	// camera.updateProjectionMatrix;
+				// 	// controls.update();
+					
+				// 	}
+										
+				// 	})
+				// }
+
+			
+				
+				controls.update();
+				render();
+
+			}
+			
+
+		</script>
+
+	</body>
+
+</html>
