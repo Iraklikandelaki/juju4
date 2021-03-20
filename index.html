@@ -10,6 +10,7 @@
 
 		<!-- <button>click me</button> -->
 		<div id="overlay">
+			<img src="./Group 96.png" alt="">
 			<button id="startButton">Play</button>
 		</div>
 		<script id="vertexShader2" type="x-shader/x-vertex">
@@ -237,7 +238,7 @@
 			let sphere;
 			let movableObjs = [];
 			let uniforms2, uniforms3, uniforms4, sphere_a;
-			let bottle2, bottle3, orbit, pointlight3, mediaElement;
+			let bottle2, bottle3, orbit, pointlight3, mediaElement, directionalLight2, directionalLight1, directionalLight3, directionalLight4, helper3, helper4;
 			const clock = new THREE.Clock();
 			const mouse = new THREE.Vector2();
 			const target = new THREE.Vector2();
@@ -272,7 +273,7 @@
 			const controls = new OrbitControls( camera, renderer.domElement );
 			controls.maxPolarAngle = Math.PI * 0.5;
 			controls.minDistance = 1;
-			controls.maxDistance = 100;
+			controls.maxDistance = 30;
 			controls.enablePan = false;
 			controls.enableZoom = true;
 			controls.minPolarAngle = (Math.PI / 2) - 0.1; // radians
@@ -286,7 +287,7 @@
 			controls.update();	
 			// scene.add( new THREE.AmbientLight( 0x404040, 1 ) );
 
-			const light = new THREE.AmbientLight( 0x404040, 3 ); // soft white light
+			const light = new THREE.AmbientLight( 0xc30037, 5 ); // soft white light
 			scene.add( light );
 
 			const renderScene = new RenderPass( scene, camera );
@@ -324,27 +325,71 @@
 			// window.addEventListener( 'pointerdown', onPointerDown );
 			// window.addEventListener( 'mousemove', onPointerDown );
 
-			// const gui = new GUI();
 
-			// gui.add( params, 'scene', [ 'Scene with Glow', 'Glow only', 'Scene only' ] ).onChange( function ( value ) {
+			var colorparams = {
+               
+              //  lightcolor: 0xc30037,  
+                lightcolor: 0xdd0006,  
+				lightcolor2: 0x21f5e3, 
+				intensity: 25,
+				intensity2: 25,
+				intensity3: 1.2,
+				intensity4: 1.2,
+				showFront: false,
+            };
 
-			// 	switch ( value ) 	{
+			const gui = new GUI();
 
-			// 		case 'Scene with Glow':
-			// 			bloomComposer.renderToScreen = false;
-			// 			break;
-			// 		case 'Glow only':
-			// 			bloomComposer.renderToScreen = true;
-			// 			break;
-			// 		case 'Scene only':
-			// 			// nothing to do
-			// 			break;
+				// gui.add(pointLight, 'intensity').min(0.0).max(10.0).step(0.1);
+				gui.add( colorparams, 'showFront' ).name( 'წინა და უკანა განათება' ).onChange(function (e) {
+					directionalLight4.visible = !directionalLight4.visible;
+					directionalLight3.visible = !directionalLight3.visible;
+					helper4.visible = !helper4.visible;
+					helper3.visible = !helper3.visible;
+       			 });
+				gui.add(colorparams, 'intensity', 0, 50).name('მარჯვენა-intensity').onChange(function (e) {
+					directionalLight1.intensity = e;
+			
+       			 });
+			
+				gui.add(colorparams, 'intensity', 0, 50).name('მარცხენა-intensity').onChange(function (e) {
+            directionalLight2.intensity = e;
+           
+       			 });
+			// 		gui.add(colorparams, 'intensity', 0, 50).name('წინა-intensity').onChange(function (e) {
+           
+            // directionalLight4.intensity4 = e;
+       		// 	 });
 
-			// 	}
+			// 		gui.add(colorparams, 'intensity', 0, 50).name('უკანა-intensity').onChange(function (e) {
+				
+			// 	directionalLight3.intensity3 = e;
+			// 	});
+				var colorFolder = gui.addFolder('Light Colour');
+			
 
-			// 	render();
+				
+				colorFolder.addColor( colorparams, 'lightcolor' )
+                .name('მარჯვენა-light')
+                .listen()
+                .onChange( function() { 
+					directionalLight1.color.set( colorparams.lightcolor); 
+					directionalLight3.color.set( colorparams.lightcolor); 
+				} );  
+				
+				colorFolder.addColor( colorparams, 'lightcolor2' )
+                .name('მარცხენა-light')
+                .listen()
+                .onChange( function() { 
+					directionalLight2.color.set( colorparams.lightcolor2);  
+					directionalLight4.color.set( colorparams.lightcolor2);  
+				
+				
+				} );  
+            colorFolder.open();
+		
+			render();
 
-			// } );
 
 			// const folder = gui.addFolder( 'Bloom Parameters' );
 
@@ -486,13 +531,13 @@
 			// 	window.addEventListener('touchstart', playSound);
 			// 	document.addEventListener('click', playSound);
 
-				setInterval(() => {
-					// console.log(Math.max(...analyser.data))
-					console.log(sizeVal)
-					// sizeVal = Math.max(...analyser.data);
+				// setInterval(() => {
+				// 	// console.log(Math.max(...analyser.data))
+				// 	console.log(sizeVal)
+				// 	// sizeVal = Math.max(...analyser.data);
 				
-					// console.log(analyser)
-				}, 1000);
+				// 	// console.log(analyser)
+				// }, 1000);
 
 				
 
@@ -642,7 +687,9 @@
 				// scene.add(plane);
 				// plane.layers.enable( BLOOM_SCENE );
 				// }
-				var geometryplane = new THREE.SphereGeometry(80, 80, 200);
+
+				// aq 80, 80, 200 iyo
+				var geometryplane = new THREE.SphereGeometry(25, 25, 200);
 
 						uniforms2 = {
 						time: {value: 0},
@@ -661,55 +708,122 @@
 
 						var mesh2 = new THREE.Mesh(geometryplane, materialplane);
 						scene.add(mesh2);
-						const light = new THREE.AmbientLight( 0xF8F3F8); // soft white light
+						const light = new THREE.AmbientLight( 0xffffff); // soft white light
 						scene.add( light );
 
-					const pointLight = new THREE.PointLight( 0x00FDFD, 2, 800 );
-					pointLight.position.set( 6, 2, 0 );
-					scene.add( pointLight );
+						directionalLight1 = new THREE.DirectionalLight( 0xe40340, 25.3 );
+						directionalLight1.position.set( 14, 2, -3 );
+					scene.add( directionalLight1 );
 
 			
 
 
+					// const pointlight = new THREE.PointLight(0x0000cc, 21, 2200);
+					// pointlight.position.set(0, 0.6, -10);
+					// scene.add(pointlight);
 
-					const pointlight2 = new THREE.PointLight(0xF82888, 2, 800);
-					pointlight2.position.set(-6, 2, 5);
-				//	pointlight2.add( new THREE.Mesh( geometry, new THREE.MeshBasicMaterial( { color: 0xff0000 } ) ) );
-					scene.add(pointlight2);
+					// const pointlight2 = new THREE.PointLight(0x0000cc, 21, 2200);
+					// pointlight2.position.set(0, 10, -10);
+					// scene.add(pointlight2);
 
-				// 	const pointlight5 = new THREE.PointLight(0x00FDFD, 3, 700);
-				// 	pointlight5.position.set(0, 2, -15);
-				// //	pointlight2.add( new THREE.Mesh( geometry, new THREE.MeshBasicMaterial( { color: 0xff0000 } ) ) );
-				// 	scene.add(pointlight5);
-			
-
-					// pointlight3 = new THREE.PointLight(0xF82888, 4.5, 5200);
-					// pointlight3.position.set(0, 10, 20);
+					// pointlight3 = new THREE.PointLight(0xcc00cc, 21, 2200);
+					// pointlight3.position.set(-10, 0, 10);
 					// scene.add(pointlight3);
+
+					// const pointlight4 = new THREE.PointLight(0xcc00cc, 21, 2200);
+					// pointlight4.position.set(10, 0, 10);
+					// scene.add(pointlight4);
+
+
+
+					directionalLight2 = new THREE.DirectionalLight(0x04b8f5, 25.3);
+				//	directionalLight2.position.set(-18, 2, 3);
+				directionalLight2.position.set(-18, 2, 3);
 				
-					// const pointlight4 = new THREE.PointLight(0x00FDFD, 2.5, 5200);
-					// pointlight4.position.set(0, 10, -20);
-					// scene.add(pointlight4);
+					scene.add(directionalLight2);
 
-					// const pointlight4 = new THREE.PointLight(0xFFA500, 1.5, 2200);
-					// pointlight4.position.set(20, 0, 90);
-					// scene.add(pointlight4);
 
-					// const sphereSize = 1;
-					// const pointLightHelper = new THREE.PointLightHelper( pointlight2, sphereSize );
-					// scene.add( pointLightHelper );
-					// const pointLightHelper2 = new THREE.PointLightHelper( pointLight, sphereSize );
-					// scene.add( pointLightHelper2 );
+
+				directionalLight3 = new THREE.DirectionalLight( 0xdd0006, 3.2 );
+						directionalLight3.position.set( 0, 2, -13 );
+					scene.add( directionalLight3 );
+
+			
+
+
+					
+					directionalLight4 = new THREE.DirectionalLight(0x21f5e3, 3.2);
+					directionalLight4.position.set(0, 2, 13);
+
+					scene.add(directionalLight4);
+
+				
+					
+// 					const HemisphereLight = new THREE.HemisphereLight(0x04b8f5,0xe40340, 15.5);
+// 					HemisphereLight.position.set(-20, -1, 3);
+					
+
+// 					scene.add(HemisphereLight);
+
+// 					const HemisphereLighthelper = new THREE.HemisphereLightHelper( HemisphereLight, 5 );
+// scene.add( HemisphereLighthelper );
+			
+			
+
+				
+				
 		
-						
+
+					const sphereSize = 1;
+			
+				
+		
+
+					const helper = new THREE.DirectionalLightHelper( directionalLight1, 5 );
+						scene.add( helper );
+
+					const helper2 = new THREE.DirectionalLightHelper( directionalLight2, 5 );
+						scene.add( helper2 );
+
+
+
+						helper3 = new THREE.DirectionalLightHelper( directionalLight3, 5 );
+						scene.add( helper3 );
+
+					helper4 = new THREE.DirectionalLightHelper( directionalLight4, 5 );
+						scene.add( helper4 );
+
+
+						if(!colorparams.showFront){
+				directionalLight4.visible = false;
+				directionalLight3.visible = false;
+				helper4.visible = false;
+				helper3.visible = false;
+			} else {
+				directionalLight4.visible = true;
+				directionalLight3.visible = true;
+				helper4.visible = true;
+				helper3.visible = true;
+			}
+
+
+
+// 					const spheregeometry = new THREE.SphereGeometry( 5, 72, 72 );
+// const spherematerial = new THREE.MeshLambertMaterial( {color: 0xffff00} );
+// const spheresphere = new THREE.Mesh( spheregeometry, spherematerial );
+// scene.add( spheresphere );
+// spheresphere.position.set(-2.7, -8.4, 0)
 						const loader = new GLTFLoader().setPath("./glbbottle/");
 							loader.load("scene.glb", function (gltf) {
 								bottle2 = gltf.scene;
 								bottle2.rotation.y = -5.2;
 								bottle2.position.y = -8.4;
 								bottle2.position.x = -2.7;
+								bottle2.receiveShadow = false;
 								bottle2.traverse(function (child) {
 								if (child.isMesh) {
+									child.receiveShadow = false;
+									child.castShadow = false;
 								}
 								});
 								bottle2.scale.set(50,50,50);
