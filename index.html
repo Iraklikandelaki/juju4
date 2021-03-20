@@ -731,41 +731,41 @@ vec4 mod289(vec4 x) {
 						value: Math.random()*2.5
 						}
 						};
-				for ( let i = 0; i < 150; i ++ ) {
+		// 		for ( let i = 0; i < 150; i ++ ) {
 					
-					// const color = new THREE.Color();
-					// color.setHSL( Math.random(), 0.8, Math.random() * 0.2 + 0.05 );
+		// 			// const color = new THREE.Color();
+		// 			// color.setHSL( Math.random(), 0.8, Math.random() * 0.2 + 0.05 );
 
-					const material = new THREE.ShaderMaterial({
-          side: THREE.DoubleSide,
-          uniforms: uniforms3,
-          vertexShader: document.getElementById("vertexShader3").textContent,
-          fragmentShader: document.getElementById("fragmentShader3").textContent,
-        });
+		// 			const material = new THREE.ShaderMaterial({
+        //   side: THREE.DoubleSide,
+        //   uniforms: uniforms3,
+        //   vertexShader: document.getElementById("vertexShader3").textContent,
+        //   fragmentShader: document.getElementById("fragmentShader3").textContent,
+        // });
 					
-					sphere = new THREE.Mesh( geometry, material );
-			// // numbers between 20-60		Math.random() * (60 - 20) + 20;
-			// 		sphere.position.x = -Math.floor(Math.random() * 6) + 100; 
-			// 		sphere.position.y = Math.floor(Math.random() * 20); 
-			// 		sphere.position.z = Math.random() * 30;
-			// 		sphere.position.normalize().multiplyScalar( Math.random() * 400 );
-			// 		// sphere.scale.setScalar( Math.random() * Math.random() + 0.5 );
+		// 			sphere = new THREE.Mesh( geometry, material );
+		// 	// // numbers between 20-60		Math.random() * (60 - 20) + 20;
+		// 	// 		sphere.position.x = -Math.floor(Math.random() * 6) + 100; 
+		// 	// 		sphere.position.y = Math.floor(Math.random() * 20); 
+		// 	// 		sphere.position.z = Math.random() * 30;
+		// 	// 		sphere.position.normalize().multiplyScalar( Math.random() * 400 );
+		// 	// 		// sphere.scale.setScalar( Math.random() * Math.random() + 0.5 );
 			
-			sphere.position.x = Math.random() * 10 - 5;
-					sphere.position.y = Math.random() * 10 - 5;
-					sphere.position.z = Math.random() * 10 - 5;
-					sphere.position.normalize().multiplyScalar( Math.random() * 30.0 + 8.0 );
-					sphere.scale.setScalar( Math.random() * Math.random() + 0.5 );
-					sphere.castShadow = false; //default is false
-					sphere.receiveShadow = false; //default
-					// sphere.material.specular.setHex(0x000000);
-					scene.add( sphere );
-					movableObjs.push(sphere);
-					// console.log(movableObjs)
-					// console.log(scene.children)
-					sphere.layers.enable( BLOOM_SCENE );
+		// 	sphere.position.x = Math.random() * 10 - 5;
+		// 			sphere.position.y = Math.random() * 10 - 5;
+		// 			sphere.position.z = Math.random() * 10 - 5;
+		// 			sphere.position.normalize().multiplyScalar( Math.random() * 30.0 + 8.0 );
+		// 			sphere.scale.setScalar( Math.random() * Math.random() + 0.5 );
+		// 			sphere.castShadow = false; //default is false
+		// 			sphere.receiveShadow = false; //default
+		// 			// sphere.material.specular.setHex(0x000000);
+		// 			scene.add( sphere );
+		// 			movableObjs.push(sphere);
+		// 			// console.log(movableObjs)
+		// 			// console.log(scene.children)
+		// 			sphere.layers.enable( BLOOM_SCENE );
 
-				}
+		// 		}
 
 
 
@@ -790,41 +790,41 @@ vec4 mod289(vec4 x) {
 						value: Math.random()*2.5
 						}
 						};
-				for ( let i = 0; i < 150; i ++ ) {
+		// 		for ( let i = 0; i < 150; i ++ ) {
 					
-					// const color = new THREE.Color();
-					// color.setHSL( Math.random(), 0.8, Math.random() * 0.2 + 0.05 );
+		// 			// const color = new THREE.Color();
+		// 			// color.setHSL( Math.random(), 0.8, Math.random() * 0.2 + 0.05 );
 
-					const material_a = new THREE.ShaderMaterial({
-          side: THREE.DoubleSide,
-          uniforms: uniforms4,
-          vertexShader: document.getElementById("vertexShader4").textContent,
-          fragmentShader: document.getElementById("fragmentShader4").textContent,
-        });
+		// 			const material_a = new THREE.ShaderMaterial({
+        //   side: THREE.DoubleSide,
+        //   uniforms: uniforms4,
+        //   vertexShader: document.getElementById("vertexShader4").textContent,
+        //   fragmentShader: document.getElementById("fragmentShader4").textContent,
+        // });
 					
-					sphere_a = new THREE.Mesh( geometry_a, material_a );
-			// // numbers between 20-60		Math.random() * (60 - 20) + 20;
-			// 		sphere.position.x = -Math.floor(Math.random() * 6) + 100; 
-			// 		sphere.position.y = Math.floor(Math.random() * 20); 
-			// 		sphere.position.z = Math.random() * 30;
-			// 		sphere.position.normalize().multiplyScalar( Math.random() * 400 );
-			// 		// sphere.scale.setScalar( Math.random() * Math.random() + 0.5 );
+		// 			sphere_a = new THREE.Mesh( geometry_a, material_a );
+		// 	// // numbers between 20-60		Math.random() * (60 - 20) + 20;
+		// 	// 		sphere.position.x = -Math.floor(Math.random() * 6) + 100; 
+		// 	// 		sphere.position.y = Math.floor(Math.random() * 20); 
+		// 	// 		sphere.position.z = Math.random() * 30;
+		// 	// 		sphere.position.normalize().multiplyScalar( Math.random() * 400 );
+		// 	// 		// sphere.scale.setScalar( Math.random() * Math.random() + 0.5 );
 			
-			sphere_a.position.x = Math.random() * 10 - 5;
-					sphere_a.position.y = Math.random() * 10 - 5;
-					sphere_a.position.z = Math.random() * 10 - 5;
-					sphere_a.position.normalize().multiplyScalar( Math.random() * 30.0 + 8.0 );
-					sphere_a.scale.setScalar( Math.random() * Math.random() + 0.5 );
-					sphere_a.castShadow = false; //default is false
-					sphere_a.receiveShadow = false; //default
-					// sphere.material.specular.setHex(0x000000);
-					scene.add( sphere_a );
-					movableObjs.push(sphere_a);
-					// console.log(movableObjs)
-					// console.log(scene.children)
-					sphere_a.layers.enable( BLOOM_SCENE );
+		// 	sphere_a.position.x = Math.random() * 10 - 5;
+		// 			sphere_a.position.y = Math.random() * 10 - 5;
+		// 			sphere_a.position.z = Math.random() * 10 - 5;
+		// 			sphere_a.position.normalize().multiplyScalar( Math.random() * 30.0 + 8.0 );
+		// 			sphere_a.scale.setScalar( Math.random() * Math.random() + 0.5 );
+		// 			sphere_a.castShadow = false; //default is false
+		// 			sphere_a.receiveShadow = false; //default
+		// 			// sphere.material.specular.setHex(0x000000);
+		// 			scene.add( sphere_a );
+		// 			movableObjs.push(sphere_a);
+		// 			// console.log(movableObjs)
+		// 			// console.log(scene.children)
+		// 			sphere_a.layers.enable( BLOOM_SCENE );
 
-				}
+		// 		}
 
 				// var radius = 10;
 				// var turns = 3;
@@ -989,45 +989,45 @@ vec4 mod289(vec4 x) {
 // scene.add( spheresphere );
 // spheresphere.position.set(-2.7, -8.4, 0)
 						const loader = new GLTFLoader().setPath("./glbbottle/");
-							loader.load("scene.glb", function (gltf) {
-								bottle2 = gltf.scene;
-								bottle2.rotation.y = -5.2;
-								bottle2.position.y = -8.4;
-								bottle2.position.x = -2.7;
-								bottle2.receiveShadow = false;
-								bottle2.traverse(function (child) {
-								if (child.isMesh) {
-									child.receiveShadow = false;
-									child.castShadow = false;
-								}
-								});
-								bottle2.scale.set(50,50,50);
-								scene.add(bottle2);
-								console.log(bottle2)
-								render();
-							});
+							// loader.load("scene.glb", function (gltf) {
+							// 	bottle2 = gltf.scene;
+							// 	bottle2.rotation.y = -5.2;
+							// 	bottle2.position.y = -8.4;
+							// 	bottle2.position.x = -2.7;
+							// 	bottle2.receiveShadow = false;
+							// 	bottle2.traverse(function (child) {
+							// 	if (child.isMesh) {
+							// 		child.receiveShadow = false;
+							// 		child.castShadow = false;
+							// 	}
+							// 	});
+							// 	bottle2.scale.set(50,50,50);
+							// 	scene.add(bottle2);
+							// 	console.log(bottle2)
+							// 	render();
+							// });
 
-							loader.load("scene.glb", function (gltf) {
-								bottle3 = gltf.scene;
-								bottle3.rotation.y = -0.1;
-								bottle3.rotation.z = -0.2;
+							// loader.load("scene.glb", function (gltf) {
+							// 	bottle3 = gltf.scene;
+							// 	bottle3.rotation.y = -0.1;
+							// 	bottle3.rotation.z = -0.2;
 
 
-								bottle3.position.y = -8.3;
-								bottle3.position.z = -2.7;
+							// 	bottle3.position.y = -8.3;
+							// 	bottle3.position.z = -2.7;
 
 								
-								bottle3.position.x = 1.2 - 2.7;
-								bottle3.traverse(function (child) {
-								if (child.isMesh) {
-								}
-								});
-								bottle3.scale.set(50,50,50);
-								scene.add(bottle3);
-								// console.log(bottle3)
+							// 	bottle3.position.x = 1.2 - 2.7;
+							// 	bottle3.traverse(function (child) {
+							// 	if (child.isMesh) {
+							// 	}
+							// 	});
+							// 	bottle3.scale.set(50,50,50);
+							// 	scene.add(bottle3);
+							// 	// console.log(bottle3)
 								
-							});
-							console.log(uniforms3.color1.value.g)
+							// });
+							// console.log(uniforms3.color1.value.g)
 				render();
 				animate();
 
