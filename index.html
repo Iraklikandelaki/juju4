@@ -34,185 +34,69 @@
 			varying vec3 vNormal;
 			uniform float time;
 			uniform vec2 u_mouse;
-			uniform vec3 color1;
-			uniform vec3 color2;
+			//uniform vec3 color1;
+		//	uniform vec3 color2;
 			
 
-			const float Pi = 100.;
-
-			const int   complexity      = 17;    // More points of color.
-			const float fluid_speed     = 700.0;  // Drives speed, higher number will make it slower.
-			const float color_intensity = 1.1;
-			//
-// Description : Array and textureless GLSL 2D/3D/4D simplex
-//               noise functions.
-//      Author : Ian McEwan, Ashima Arts.
-//  Maintainer : ijm
-//     Lastmod : 20110822 (ijm)
-//     License : Copyright (C) 2011 Ashima Arts. All rights reserved.
-//               Distributed under the MIT License. See LICENSE file.
-//               https://github.com/ashima/webgl-noise
-//
-
-vec4 mod289(vec4 x) {
-	return x - floor(x * (1.0 / 289.0)) * 289.0;
-	}
-	
-	float mod289(float x) {
-	return x - floor(x * (1.0 / 289.0)) * 289.0;
-	}
-	
-	vec4 permute(vec4 x) {
-	return mod289(((x*34.0)+1.0)*x);
-	}
-	
-	float permute(float x) {
-	return mod289(((x*34.0)+1.0)*x);
-	}
-	
-	vec4 taylorInvSqrt(vec4 r)
-	{
-	return 1.79284291400159 - 0.85373472095314 * r;
-	}
-	
-	float taylorInvSqrt(float r)
-	{
-	return 1.79284291400159 - 0.85373472095314 * r;
-	}
-	
-	vec4 grad4(float j, vec4 ip)
-	{
-	const vec4 ones = vec4(1.0, 1.0, 1.0, -1.0);
-	vec4 p,s;
-	
-	p.xyz = floor( fract (vec3(j) * ip.xyz) * 9.0) * ip.z - 1.0;
-	p.w = 0.2 - dot(abs(p.xyz), ones.xyz);
-	s = vec4(lessThan(p, vec4(0.0)));
-	p.xyz = p.xyz*0.5 + (s.xyz*6.0 - 1.0) * s.www;
-	
-	return p;
-	}
-	
-	// (sqrt(5) - 1)/4 = F4, used once below
-	#define F4 0.309016994374947451
-	
-	float snoise(vec4 v)
-	{
-	const vec4  C = vec4( 0.138196601125011,  // (5 - sqrt(5))/20  G4
-	0.276393202250021,  // 2 * G4
-	0.414589803375032,  // 3 * G4
-	-0.447213595499958); // -1 + 4 * G4
-	
-	// First corner
-	vec4 i  = floor(v + dot(v, vec4(F4)) );
-	vec4 x0 = v -   i + dot(i, C.xxxx);
-	
-	// Other corners
-	
-	// Rank sorting originally contributed by Bill Licea-Kane, AMD (formerly ATI)
-	vec4 i0;
-	vec3 isX = step( x0.yzw, x0.xxx );
-	vec3 isYZ = step( x0.zww, x0.yyz );
-	//  i0.x = dot( isX, vec3( 1.0 ) );
-	i0.x = isX.x + isX.y + isX.z;
-	i0.yzw = 1.0 - isX;
-	//  i0.y += dot( isYZ.xy, vec2( 1.0 ) );
-	i0.y += isYZ.x + isYZ.y;
-	i0.zw += 1.0 - isYZ.xy;
-	i0.z += isYZ.z;
-	i0.w += 1.0 - isYZ.z;
-	
-	// i0 now contains the unique values 0,1,2,3 in each channel
-	vec4 i3 = clamp( i0, 0.0, 1.0 );
-	vec4 i2 = clamp( i0-1.0, 0.0, 1.0 );
-	vec4 i1 = clamp( i0-2.0, 0.0, 1.0 );
-	
-	//  x0 = x0 - 0.0 + 0.0 * C.xxxx
-	//  x1 = x0 - i1  + 1.0 * C.xxxx
-	//  x2 = x0 - i2  + 2.0 * C.xxxx
-	//  x3 = x0 - i3  + 3.0 * C.xxxx
-	//  x4 = x0 - 1.0 + 4.0 * C.xxxx
-	vec4 x1 = x0 - i1 + C.xxxx;
-	vec4 x2 = x0 - i2 + C.yyyy;
-	vec4 x3 = x0 - i3 + C.zzzz;
-	vec4 x4 = x0 + C.wwww;
-	
-	// Permutations
-	i = mod289(i);
-	float j0 = permute( permute( permute( permute(i.w) + i.z) + i.y) + i.x);
-	vec4 j1 = permute( permute( permute( permute (
-	i.w + vec4(i1.w, i2.w, i3.w, 1.0 ))
-	+ i.z + vec4(i1.z, i2.z, i3.z, 1.0 ))
-	+ i.y + vec4(i1.y, i2.y, i3.y, 1.0 ))
-	+ i.x + vec4(i1.x, i2.x, i3.x, 1.0 ));
-	
-	// Gradients: 7x7x6 points over a cube, mapped onto a 4-cross polytope
-	// 7*7*6 = 294, which is close to the ring size 17*17 = 289.
-	vec4 ip = vec4(1.0/294.0, 1.0/49.0, 1.0/7.0, 0.0) ;
-	
-	vec4 p0 = grad4(j0,   ip);
-	vec4 p1 = grad4(j1.x, ip);
-	vec4 p2 = grad4(j1.y, ip);
-	vec4 p3 = grad4(j1.z, ip);
-	vec4 p4 = grad4(j1.w, ip);
-	
-	// Normalise gradients
-	vec4 norm = taylorInvSqrt(vec4(dot(p0,p0), dot(p1,p1), dot(p2, p2), dot(p3,p3)));
-	p0 *= norm.x;
-	p1 *= norm.y;
-	p2 *= norm.z;
-	p3 *= norm.w;
-	p4 *= taylorInvSqrt(dot(p4,p4));
-	
-	// Mix contributions from the five corners
-	vec3 m0 = max(0.6 - vec3(dot(x0,x0), dot(x1,x1), dot(x2,x2)), 0.0);
-	vec2 m1 = max(0.6 - vec2(dot(x3,x3), dot(x4,x4)            ), 0.0);
-	m0 = m0 * m0;
-	m1 = m1 * m1;
-	// es amkvetrebs da abacebs kutxeebs
-	return 39.0 * ( dot(m0*m0, vec3( dot( p0, x0 ), dot( p1, x1 ), dot( p2, x2 ))) 
-	+ dot(m1*m1, vec2( dot( p3, x3 ), dot( p4, x4 ) ) ) ) ;
-	
-	}
+			
 			void main() {
-			//	vec3 color1 = vec3(0.149,0.141,0.912);
-			//	vec3 color2 = vec3(1.000,0.833,0.224);
-
 		
-				//	vec3 color3 = vec3(0.,0.157,0.294);
-					vec3 color3 = vec3(0.737,0.231,0.545);
-			vec3 color4 = vec3(0.655,0., 0.455);
+
+
+			vec3 color1 = vec3(0.729,0.796,0.196);
+			vec3 color2 = vec3(0.459,0.518,0.);
+				
+					vec3 color3 = vec3(0.957,0.612,0.722);
+					vec3 color4 = vec3(0.992,0.424,0.169);
+
+					vec3 color5 = vec3(0.957,0.612, 0.722);
+					vec3 color6 = vec3(0.996,0.416, 0.153);
 	
-				float pct = abs(sin(time*0.5));
+				float pct = abs(sin(time*1.));
 				vec3 colorMix1 = vec3(0.0);
 				vec3 colorMix2 = vec3(0.0);
-			
-			//	float noisy = snoise(vec4(vPosition*0.18, time*0.7));
+				vec3 colorMix3 = vec3(0.0);
+				float center = distance(1. - vUv, vec2(0.5));
+
+
+
+				color1.r += abs(0.15 - center);
+				color1.g += abs(0.15 - center);
+				color1.b += abs(0.15 - center);
+
+
+				color2.r += abs(0.5 - center);
+				color2.g += abs(0.15 - center);
+				color2.b += abs(0.15 - center);
+
+
+
+				color3.r += abs(0.15 - center);
+				color3.g += abs(0.15 - center);
+				color3.b += abs(0.15 - center);
+
+
+				color4.r += abs(0.15 - center);
+				color4.g += abs(0.15 - center);
+				color4.b += abs(0.15 - center);
+				//colorMix1 = mix(color1, color2, vUv.y);
 				colorMix1 = mix(color1, color2, vUv.y);
-			//	colorMix2 = mix(color3, color4, vUv.y);
-				vec3 blackColor = vec3(0.0);
-			//	colorMix2 = mix(color3, vec3(noisy,1.3, 1.0), vUv.y);
-			//	colorMix2 = mix(color3, vec3(noisy,0.231,0.545), vUv.y);
+
 				
 				
-			// vec3 p = vPosition/9.;
 			
-			vec3 p = vec3(vPosition/29.);
-			
-				for(int i=1;i<complexity;i++)
-				{
-					vec3 newp=p + time*0.035;
-				//	newp.x+=0.5/float(i)*sin(float(i)*p.y+time/fluid_speed+20.3*float(i)) + 1.5; // + mouse.y/mouse_factor+mouse_offset;
-					newp.y+=0.5/float(i)*sin(float(i)*p.y+time/fluid_speed+20.3*float(i)) + 1.5; // + mouse.y/mouse_factor+mouse_offset;
-					newp.y+=0.5/float(i)*sin(float(i)*p.x+time/fluid_speed+0.3*float(i+10)) - 0.3; // - mouse.x/mouse_factor+mouse_offset;
-					p=newp;
-				}
-				vec3 col=vec3(color_intensity*sin(3.0*p.x)+color_intensity,color_intensity*sin(3.0*p.y)+color_intensity,color_intensity*sin(p.x+p.y)+color_intensity);
 				
-				colorMix2 = mix(color3, col, vUv.y);	
+				colorMix2 = mix(color3, color4, vUv.y);	
+
+				colorMix3 = mix(color5, color6, vUv.y);	
+
+				
+				vec3 tmp = mix(colorMix1, colorMix2, pct);
+
 
 				gl_FragColor = vec4(mix(colorMix1, colorMix2, pct), 1.0);
-				//gl_FragColor = vec4(noisy);
+				//gl_FragColor = vec4(mix(tmp, colorMix3, pct), 1.0);
+				
 			}
 		  </script>
 
@@ -372,6 +256,69 @@ vec4 mod289(vec4 x) {
 	  
 			}
 		  </script>
+
+
+		  <script id="vertexShader5" type="x-shader/x-vertex">
+			varying vec2 vUv;
+			varying vec3 newposition;
+			varying vec3 vNormal;
+			varying float x;
+			varying float y;
+			uniform float time;
+			uniform float random;
+			uniform vec2 u_mouse;
+			uniform vec2 u_resolution;
+			uniform float width;
+			uniform float height;
+			uniform vec3 color1;
+			uniform vec3 color2;
+			void main() {
+			  vUv = uv;
+			  vNormal = normal;
+			  newposition = position;
+			  x = position.x / 250.0;
+			  y = position.y / 250.0;
+	  
+			 // newposition.z += 1.05*sin(newposition.y*20. + random + newposition.x*random*0.05);
+					  gl_Position = projectionMatrix * modelViewMatrix * vec4(newposition, 1.0);
+				  }
+		  </script>
+		  <script id="fragmentShader5" type="x-shader/x-fragment">
+			varying vec2 vUv;
+			varying vec3 newposition;
+			varying vec3 vNormal;
+			varying float x;
+			 varying float y;
+			uniform float time;
+			uniform float random;
+			uniform vec2 u_mouse;
+			uniform vec2 u_resolution;
+			uniform vec3 color1;
+			uniform vec3 color2;
+			float plot(vec2 coord, float pct){
+			  return  smoothstep( pct-0.260, pct, coord.y) -
+					  smoothstep( pct, pct+0.068, coord.y);
+			}
+			void main() {
+			vec2 coord = vUv.xy;
+			vec3 color = vec3(0.0);
+	  
+	  
+	  
+			//color = mix(color1, color2, 2.3 -  vUv.y*1.25);
+			color = mix(color1, color2, 1.7 -  vUv.y*2.5);
+	  
+	  
+			gl_FragColor = vec4(color, 1.0);
+	  
+			
+	  
+	  
+	  
+		
+	  
+			}
+		  </script>
 		  <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.6.0/gsap.min.js"></script>
 		<script type="module">
 
@@ -392,12 +339,13 @@ vec4 mod289(vec4 x) {
 			const ENTIRE_SCENE = 0, BLOOM_SCENE = 1;
 			let analyser;
 			let sizeVal = 0;
-
+			let textureCube;
+			let mixer;
 			const bloomLayer = new THREE.Layers();
 			bloomLayer.set( BLOOM_SCENE );
 			let sphere;
 			let movableObjs = [];
-			let uniforms2, uniforms3, uniforms4, sphere_a, helper, helper2;
+			let uniforms2, uniforms3, uniforms4, sphere_a, helper, helper2, uniforms5, sphere_b;
 			let bottle2, bottle3, orbit, pointlight3, mediaElement, directionalLight2, directionalLight1, directionalLight3, directionalLight4, helper3, helper4;
 			const clock = new THREE.Clock();
 			const mouse = new THREE.Vector2();
@@ -428,17 +376,17 @@ vec4 mod289(vec4 x) {
 			// camera.position.set( 0, 0, 20 );
 			camera.position.set(0, 0.6, -28);
 			camera.position.z = 25;
-			camera.lookAt( 0, 0, 0 );
+		//	camera.lookAt( 0, 0, 0 );
 
 			const controls = new OrbitControls( camera, renderer.domElement );
 			controls.maxPolarAngle = Math.PI * 0.5;
-			controls.minDistance = 1;
-			controls.maxDistance = 30;
+			//controls.minDistance = 1;
+			//controls.maxDistance = 25;
 			controls.enablePan = false;
-			controls.enableZoom = true;
+			controls.enableZoom = false;
 			controls.minPolarAngle = (Math.PI / 2) - 0.1; // radians
 		  		controls.maxPolarAngle = (Math.PI / 2) - 0.1; // radians
-			controls.target.set(0,0,0);
+//controls.target.set(-1,0,10);
 			controls.enableDamping = true;
 			//controls.dampingFactor =  0.05;
 			controls.dampingFactor =  0.01;
@@ -447,8 +395,8 @@ vec4 mod289(vec4 x) {
 			controls.update();	
 			// scene.add( new THREE.AmbientLight( 0x404040, 1 ) );
 
-			// const light = new THREE.AmbientLight( 0xc30037, 5 ); // soft white light
-			// scene.add( light );
+			const light = new THREE.AmbientLight( 0xc30037, 5 ); // soft white light
+			scene.add( light );
 
 			const renderScene = new RenderPass( scene, camera );
 
@@ -499,29 +447,29 @@ vec4 mod289(vec4 x) {
 				showFront2: false,
             };
 
-			const gui = new GUI();
+			// const gui = new GUI();
 
-				// gui.add(pointLight, 'intensity').min(0.0).max(10.0).step(0.1);
-				gui.add( colorparams, 'showFront' ).name( 'წინა და უკანა განათება და ჰელფერები' ).onChange(function (e) {
-					directionalLight4.visible = !directionalLight4.visible;
-					directionalLight3.visible = !directionalLight3.visible;
-					helper4.visible = !helper4.visible;
-					helper3.visible = !helper3.visible;
-       			 });
-					gui.add( colorparams, 'showFront2' ).name( 'გვერდების ჰელფერები' ).onChange(function (e) {
+			// 	// gui.add(pointLight, 'intensity').min(0.0).max(10.0).step(0.1);
+			// 	gui.add( colorparams, 'showFront' ).name( 'წინა და უკანა განათება და ჰელფერები' ).onChange(function (e) {
+			// 		directionalLight4.visible = !directionalLight4.visible;
+			// 		directionalLight3.visible = !directionalLight3.visible;
+			// 		helper4.visible = !helper4.visible;
+			// 		helper3.visible = !helper3.visible;
+       		// 	 });
+			// 		gui.add( colorparams, 'showFront2' ).name( 'გვერდების ჰელფერები' ).onChange(function (e) {
 				
-					helper.visible = !helper.visible;
-					helper2.visible = !helper2.visible;
-       			 });
-				gui.add(colorparams, 'intensity', 0, 50).name('მარჯვენა-intensity').onChange(function (e) {
-					directionalLight1.intensity = e;
+			// 		helper.visible = !helper.visible;
+			// 		helper2.visible = !helper2.visible;
+       		// 	 });
+			// 	gui.add(colorparams, 'intensity', 0, 50).name('მარჯვენა-intensity').onChange(function (e) {
+			// 		directionalLight1.intensity = e;
 			
-       			 });
+       		// 	 });
 			
-				gui.add(colorparams, 'intensity', 0, 50).name('მარცხენა-intensity').onChange(function (e) {
-            directionalLight2.intensity = e;
+			// 	gui.add(colorparams, 'intensity', 0, 50).name('მარცხენა-intensity').onChange(function (e) {
+            // directionalLight2.intensity = e;
            
-       			 });
+       		// 	 });
 			// 		gui.add(colorparams, 'intensity', 0, 50).name('წინა-intensity').onChange(function (e) {
            
             // directionalLight4.intensity4 = e;
@@ -531,28 +479,28 @@ vec4 mod289(vec4 x) {
 				
 			// 	directionalLight3.intensity3 = e;
 			// 	});
-				var colorFolder = gui.addFolder('Light Colour');
+			// 	var colorFolder = gui.addFolder('Light Colour');
 			
 
 				
-				colorFolder.addColor( colorparams, 'lightcolor' )
-                .name('მარჯვენა-light')
-                .listen()
-                .onChange( function() { 
-					directionalLight1.color.set( colorparams.lightcolor); 
-					directionalLight3.color.set( colorparams.lightcolor); 
-				} );  
+			// 	colorFolder.addColor( colorparams, 'lightcolor' )
+            //     .name('მარჯვენა-light')
+            //     .listen()
+            //     .onChange( function() { 
+			// 		directionalLight1.color.set( colorparams.lightcolor); 
+			// 		directionalLight3.color.set( colorparams.lightcolor); 
+			// 	} );  
 				
-				colorFolder.addColor( colorparams, 'lightcolor2' )
-                .name('მარცხენა-light')
-                .listen()
-                .onChange( function() { 
-					directionalLight2.color.set( colorparams.lightcolor2);  
-					directionalLight4.color.set( colorparams.lightcolor2);  
+			// 	colorFolder.addColor( colorparams, 'lightcolor2' )
+            //     .name('მარცხენა-light')
+            //     .listen()
+            //     .onChange( function() { 
+			// 		directionalLight2.color.set( colorparams.lightcolor2);  
+			// 		directionalLight4.color.set( colorparams.lightcolor2);  
 				
 				
-				} );  
-            colorFolder.open();
+			// 	} );  
+            // colorFolder.open();
 		
 			render();
 
@@ -638,7 +586,7 @@ vec4 mod289(vec4 x) {
 				const listener = new THREE.AudioListener();
 
 				const audio = new THREE.Audio( listener );
-				const file = './talk2.mp3';
+				const file = './funk.mp3';
 
 				if ( /(iPad|iPhone|iPod)/g.test( navigator.userAgent ) ) {
 
@@ -646,7 +594,8 @@ vec4 mod289(vec4 x) {
 					loader.load( file, function ( buffer ) {
 						// audio.setRefDistance( 2000 );
 						audio.setBuffer( buffer );
-					
+						audio.setLoop( true );
+						audio.onEnded(audio.play())
 					
 					audio.play();
 					
@@ -660,10 +609,10 @@ vec4 mod289(vec4 x) {
 				} else {
 
 					mediaElement = new Audio( file );
-				
+					
 					audio.setMediaElementSource( mediaElement );
 				
-				
+		
 				
 						mediaElement.play();
 				
@@ -697,13 +646,13 @@ vec4 mod289(vec4 x) {
 			// 	window.addEventListener('touchstart', playSound);
 			// 	document.addEventListener('click', playSound);
 
-				// setInterval(() => {
-				// 	// console.log(Math.max(...analyser.data))
-				// 	console.log(sizeVal)
-				// 	// sizeVal = Math.max(...analyser.data);
+				setInterval(() => {
+					// console.log(Math.max(...analyser.data))
+					console.log(sizeVal)
+					// sizeVal = Math.max(...analyser.data);
 				
-				// 	// console.log(analyser)
-				// }, 1000);
+					// console.log(analyser)
+				}, 1000);
 
 				
 
@@ -717,7 +666,7 @@ vec4 mod289(vec4 x) {
 						time: {value: 0},
 						u_mouse: { type: "v2", value: new THREE.Vector2() },
 						u_resolution: { type: "v2", value: new THREE.Vector2() },
-						color1: { type: "c", value: new THREE.Color(0xFFD225)  },
+						color1: { type: "c", value: new THREE.Color(0xfdcf18)  },
 						color2: { type: "c", value: new THREE.Color(0xff760f)  },
 						width: {
 							type: "f",
@@ -731,41 +680,41 @@ vec4 mod289(vec4 x) {
 						value: Math.random()*2.5
 						}
 						};
-		// 		for ( let i = 0; i < 150; i ++ ) {
+				for ( let i = 0; i < 100; i ++ ) {
 					
-		// 			// const color = new THREE.Color();
-		// 			// color.setHSL( Math.random(), 0.8, Math.random() * 0.2 + 0.05 );
+					// const color = new THREE.Color();
+					// color.setHSL( Math.random(), 0.8, Math.random() * 0.2 + 0.05 );
 
-		// 			const material = new THREE.ShaderMaterial({
-        //   side: THREE.DoubleSide,
-        //   uniforms: uniforms3,
-        //   vertexShader: document.getElementById("vertexShader3").textContent,
-        //   fragmentShader: document.getElementById("fragmentShader3").textContent,
-        // });
+					const material = new THREE.ShaderMaterial({
+          side: THREE.DoubleSide,
+          uniforms: uniforms3,
+          vertexShader: document.getElementById("vertexShader3").textContent,
+          fragmentShader: document.getElementById("fragmentShader3").textContent,
+        });
 					
-		// 			sphere = new THREE.Mesh( geometry, material );
-		// 	// // numbers between 20-60		Math.random() * (60 - 20) + 20;
-		// 	// 		sphere.position.x = -Math.floor(Math.random() * 6) + 100; 
-		// 	// 		sphere.position.y = Math.floor(Math.random() * 20); 
-		// 	// 		sphere.position.z = Math.random() * 30;
-		// 	// 		sphere.position.normalize().multiplyScalar( Math.random() * 400 );
-		// 	// 		// sphere.scale.setScalar( Math.random() * Math.random() + 0.5 );
+					sphere = new THREE.Mesh( geometry, material );
+			// // numbers between 20-60		Math.random() * (60 - 20) + 20;
+			// 		sphere.position.x = -Math.floor(Math.random() * 6) + 100; 
+			// 		sphere.position.y = Math.floor(Math.random() * 20); 
+			// 		sphere.position.z = Math.random() * 30;
+			// 		sphere.position.normalize().multiplyScalar( Math.random() * 400 );
+			// 		// sphere.scale.setScalar( Math.random() * Math.random() + 0.5 );
 			
-		// 	sphere.position.x = Math.random() * 10 - 5;
-		// 			sphere.position.y = Math.random() * 10 - 5;
-		// 			sphere.position.z = Math.random() * 10 - 5;
-		// 			sphere.position.normalize().multiplyScalar( Math.random() * 30.0 + 8.0 );
-		// 			sphere.scale.setScalar( Math.random() * Math.random() + 0.5 );
-		// 			sphere.castShadow = false; //default is false
-		// 			sphere.receiveShadow = false; //default
-		// 			// sphere.material.specular.setHex(0x000000);
-		// 			scene.add( sphere );
-		// 			movableObjs.push(sphere);
-		// 			// console.log(movableObjs)
-		// 			// console.log(scene.children)
-		// 			sphere.layers.enable( BLOOM_SCENE );
+			sphere.position.x = Math.random() * 10 - 5;
+					sphere.position.y = Math.random() * 10 - 5;
+					sphere.position.z = Math.random() * 10 - 5;
+					sphere.position.normalize().multiplyScalar( Math.random() * 30.0 + 8.0 );
+					sphere.scale.setScalar( Math.random() * Math.random() + 0.5 );
+					sphere.castShadow = false; //default is false
+					sphere.receiveShadow = false; //default
+					// sphere.material.specular.setHex(0x000000);
+					scene.add( sphere );
+					movableObjs.push(sphere);
+					// console.log(movableObjs)
+					// console.log(scene.children)
+					sphere.layers.enable( BLOOM_SCENE );
 
-		// 		}
+				}
 
 
 
@@ -776,8 +725,8 @@ vec4 mod289(vec4 x) {
 						time: {value: 0},
 						u_mouse: { type: "v2", value: new THREE.Vector2() },
 						u_resolution: { type: "v2", value: new THREE.Vector2() },
-						color1: { type: "c", value: new THREE.Color(0xff2596)  },
-						color2: { type: "c", value: new THREE.Color(0x57063d)  },
+						color1: { type: "c", value: new THREE.Color(0xf49cb8)  },
+						color2: { type: "c", value: new THREE.Color(0xe63296)  },
 						width: {
 							type: "f",
 							value: window.innerWidth
@@ -790,69 +739,92 @@ vec4 mod289(vec4 x) {
 						value: Math.random()*2.5
 						}
 						};
-		// 		for ( let i = 0; i < 150; i ++ ) {
-					
-		// 			// const color = new THREE.Color();
-		// 			// color.setHSL( Math.random(), 0.8, Math.random() * 0.2 + 0.05 );
 
-		// 			const material_a = new THREE.ShaderMaterial({
-        //   side: THREE.DoubleSide,
-        //   uniforms: uniforms4,
-        //   vertexShader: document.getElementById("vertexShader4").textContent,
-        //   fragmentShader: document.getElementById("fragmentShader4").textContent,
-        // });
+
+				for ( let i = 0; i < 100; i ++ ) {
 					
-		// 			sphere_a = new THREE.Mesh( geometry_a, material_a );
-		// 	// // numbers between 20-60		Math.random() * (60 - 20) + 20;
-		// 	// 		sphere.position.x = -Math.floor(Math.random() * 6) + 100; 
-		// 	// 		sphere.position.y = Math.floor(Math.random() * 20); 
-		// 	// 		sphere.position.z = Math.random() * 30;
-		// 	// 		sphere.position.normalize().multiplyScalar( Math.random() * 400 );
-		// 	// 		// sphere.scale.setScalar( Math.random() * Math.random() + 0.5 );
+					
+
+					const material_a = new THREE.ShaderMaterial({
+          side: THREE.DoubleSide,
+          uniforms: uniforms4,
+          vertexShader: document.getElementById("vertexShader4").textContent,
+          fragmentShader: document.getElementById("fragmentShader4").textContent,
+        });
+					
+					sphere_a = new THREE.Mesh( geometry_a, material_a );
 			
-		// 	sphere_a.position.x = Math.random() * 10 - 5;
-		// 			sphere_a.position.y = Math.random() * 10 - 5;
-		// 			sphere_a.position.z = Math.random() * 10 - 5;
-		// 			sphere_a.position.normalize().multiplyScalar( Math.random() * 30.0 + 8.0 );
-		// 			sphere_a.scale.setScalar( Math.random() * Math.random() + 0.5 );
-		// 			sphere_a.castShadow = false; //default is false
-		// 			sphere_a.receiveShadow = false; //default
-		// 			// sphere.material.specular.setHex(0x000000);
-		// 			scene.add( sphere_a );
-		// 			movableObjs.push(sphere_a);
-		// 			// console.log(movableObjs)
-		// 			// console.log(scene.children)
-		// 			sphere_a.layers.enable( BLOOM_SCENE );
+			
+			sphere_a.position.x = Math.random() * 10 - 5;
+					sphere_a.position.y = Math.random() * 10 - 5;
+					sphere_a.position.z = Math.random() * 10 - 5;
+					sphere_a.position.normalize().multiplyScalar( Math.random() * 30.0 + 8.0 );
+					sphere_a.scale.setScalar( Math.random() * Math.random() + 0.5 );
+					sphere_a.castShadow = false; //default is false
+					sphere_a.receiveShadow = false; //default
+					
+					scene.add( sphere_a );
+					movableObjs.push(sphere_a);
+					
+					sphere_a.layers.enable( BLOOM_SCENE );
 
-		// 		}
+				}
 
-				// var radius = 10;
-				// var turns = 3;
-				// var objPerTurn = 30;
 
-				// var angleStep = (Math.PI * 2) / objPerTurn;
-				// var heightStep = 0.5;
 
-				// var geom = new THREE.SphereGeometry(0.5, 50, 50);
 
-				// for (let i = 0; i < turns * objPerTurn; i++) {
-				// let plane = new THREE.Mesh(geom, new THREE.MeshBasicMaterial({
-				// 	color: Math.random() * 0x888888 + 0x888888
-				// }));
 
-				// // position
-				// plane.position.set(
-				// 	Math.cos(angleStep * i) * radius,
-				// 	heightStep * i,
-				// 	Math.sin(angleStep * i) * radius
-				// );
+					
+				const geometry_b = new THREE.SphereGeometry( 0.2, 32, 32 );
+				uniforms5 = {
+						time: {value: 0},
+						u_mouse: { type: "v2", value: new THREE.Vector2() },
+						u_resolution: { type: "v2", value: new THREE.Vector2() },
+						color1: { type: "c", value: new THREE.Color(0xf49cb8)  },
+						color2: { type: "c", value: new THREE.Color(0xe63296)  },
+						width: {
+							type: "f",
+							value: window.innerWidth
+						},
+						height: {
+							type: "f",
+							value: window.innerHeight
+						},
+						random: {
+						value: Math.random()*2.5
+						}
+						};
 
-				// // rotation
-				// plane.rotation.y = -angleStep * i;
+						
+				for ( let i = 0; i < 100; i ++ ) {
+					
+					
 
-				// scene.add(plane);
-				// plane.layers.enable( BLOOM_SCENE );
-				// }
+					const material_b = new THREE.ShaderMaterial({
+          side: THREE.DoubleSide,
+          uniforms: uniforms5,
+          vertexShader: document.getElementById("vertexShader4").textContent,
+          fragmentShader: document.getElementById("fragmentShader4").textContent,
+        });
+					
+					sphere_b = new THREE.Mesh( geometry_b, material_b );
+			
+			
+			sphere_b.position.x = Math.random() * 10 - 5;
+			sphere_b.position.y = Math.random() * 10 - 5;
+			sphere_b.position.z = Math.random() * 10 - 5;
+			sphere_b.position.normalize().multiplyScalar( Math.random() * 30.0 + 8.0 );
+			sphere_b.scale.setScalar( Math.random() * Math.random() + 0.5 );
+			sphere_b.castShadow = false; //default is false
+			sphere_b.receiveShadow = false; //default
+					
+					scene.add( sphere_b );
+					movableObjs.push(sphere_b);
+					
+					//sphere_b.layers.enable( BLOOM_SCENE );
+
+				}
+				
 
 				// aq 80, 80, 200 iyo
 				var geometryplane = new THREE.SphereGeometry(25, 25, 200);
@@ -860,8 +832,8 @@ vec4 mod289(vec4 x) {
 						uniforms2 = {
 						time: {value: 0},
 						u_mouse: { type: "v2", value: new THREE.Vector2() },
-						color1: { type: "c", value: new THREE.Color(0x2523e8)  },
-						color2: { type: "c", value: new THREE.Color(0xffd439)  },
+						// color1: { type: "c", value: new THREE.Color(0xbacb32)  },
+						// color2: { type: "c", value: new THREE.Color(0x758400)  },
 						};
 
 						var materialplane = new THREE.ShaderMaterial({
@@ -884,21 +856,7 @@ vec4 mod289(vec4 x) {
 			
 
 
-					// const pointlight = new THREE.PointLight(0x0000cc, 21, 2200);
-					// pointlight.position.set(0, 0.6, -10);
-					// scene.add(pointlight);
-
-					// const pointlight2 = new THREE.PointLight(0x0000cc, 21, 2200);
-					// pointlight2.position.set(0, 10, -10);
-					// scene.add(pointlight2);
-
-					// pointlight3 = new THREE.PointLight(0xcc00cc, 21, 2200);
-					// pointlight3.position.set(-10, 0, 10);
-					// scene.add(pointlight3);
-
-					// const pointlight4 = new THREE.PointLight(0xcc00cc, 21, 2200);
-					// pointlight4.position.set(10, 0, 10);
-					// scene.add(pointlight4);
+				
 
 
 
@@ -934,10 +892,19 @@ vec4 mod289(vec4 x) {
 // 					const HemisphereLighthelper = new THREE.HemisphereLightHelper( HemisphereLight, 5 );
 // scene.add( HemisphereLighthelper );
 			
-			
+const cubeloader = new THREE.CubeTextureLoader();
+				cubeloader.setPath( './glbbottle/bottleenv/' );
+
+				textureCube = cubeloader.load( [ 'posx.jpg', 'negx.jpg', 'posy.jpg', 'negy.jpg', 'posz.jpg', 'negz.jpg' ] );
+				textureCube.encoding = THREE.sRGBEncoding;
 
 				
-				
+// const geometrytest = new THREE.SphereGeometry( 3, 232, 232 );
+// const materialtest = new THREE.MeshPhongMaterial( {color: 0xffff00, shininess: 60.2} );
+// materialtest.envMap = textureCube;
+// materialtest.needsUpdate = true;
+// const spheretest = new THREE.Mesh( geometrytest, materialtest );
+// scene.add( spheretest );
 		
 
 					const sphereSize = 1;
@@ -983,31 +950,57 @@ vec4 mod289(vec4 x) {
 			}
 
 
-// 					const spheregeometry = new THREE.SphereGeometry( 5, 72, 72 );
-// const spherematerial = new THREE.MeshLambertMaterial( {color: 0xffff00} );
-// const spheresphere = new THREE.Mesh( spheregeometry, spherematerial );
-// scene.add( spheresphere );
-// spheresphere.position.set(-2.7, -8.4, 0)
-						const loader = new GLTFLoader().setPath("./glbbottle/");
-							// loader.load("scene.glb", function (gltf) {
-							// 	bottle2 = gltf.scene;
-							// 	bottle2.rotation.y = -5.2;
-							// 	bottle2.position.y = -8.4;
-							// 	bottle2.position.x = -2.7;
-							// 	bottle2.receiveShadow = false;
-							// 	bottle2.traverse(function (child) {
-							// 	if (child.isMesh) {
-							// 		child.receiveShadow = false;
-							// 		child.castShadow = false;
-							// 	}
-							// 	});
-							// 	bottle2.scale.set(50,50,50);
-							// 	scene.add(bottle2);
-							// 	console.log(bottle2)
-							// 	render();
-							// });
 
-							// loader.load("scene.glb", function (gltf) {
+						const loader = new GLTFLoader().setPath("./glbbottle/");
+				
+						// console.log(texture)
+							loader.load("jujuna.glb", function (gltf) {
+								bottle2 = gltf.scene;
+								bottle2.rotation.y = -2.0;
+								//bottle2.rotation.y = -28.6;
+								bottle2.position.y = -8.2;
+								bottle2.position.x = 7.8;
+								bottle2.receiveShadow = false;
+								bottle2.traverse(function (child) {
+								if (child.isMesh) {
+									child.receiveShadow = false;
+									child.castShadow = false;
+									child.material.envMap = textureCube;
+									child.material.envMapIntensity = 20.5;
+								}
+								});
+								console.log(gltf)
+								bottle2.scale.set(50,50,50);
+								scene.add(bottle2);
+								//camera.position.set(-22.225244871783282, 2.4965541132930738, 11.187748117859483);
+								camera.position.set(-17.697619093236263, -3.4965541132930738, 0);
+								//camera.lookAt(bottle2.position);
+							//controls.target.copy( bottle2.position );
+							controls.target.set( 7.8, -2.2, 0 );
+								controls.update();
+								// console.log(bottle2)
+							mixer = new THREE.AnimationMixer( gltf.scene );
+							let firstAction = mixer.clipAction(gltf.animations[0]);
+							console.log(bottle2)
+							//firstAction.setLoop(THREE.LoopRepeat, 25);	
+							
+							firstAction.play();
+							animate();
+							// firstAction.play();
+							// mixer.addEventListener('finished', (e) => { 
+							// 	console.log("hewy")
+
+
+							// })
+								//render();
+							
+							});
+							
+							document.addEventListener("click", () => {
+								//console.log(camera.position)
+								//console.log(bottle2.position)
+							})
+							// loader.load("jujuna.glb", function (gltf) {
 							// 	bottle3 = gltf.scene;
 							// 	bottle3.rotation.y = -0.1;
 							// 	bottle3.rotation.z = -0.2;
@@ -1027,7 +1020,7 @@ vec4 mod289(vec4 x) {
 							// 	// console.log(bottle3)
 								
 							// });
-							// console.log(uniforms3.color1.value.g)
+							console.log(uniforms3.color1.value.g)
 				render();
 				animate();
 
@@ -1141,6 +1134,9 @@ vec4 mod289(vec4 x) {
 
 			}
 			var animate = function () {
+				const delta = clock.getDelta();
+
+			if(bottle2)	mixer.update( delta );
         requestAnimationFrame(animate);
 		if(analyser)	analyser.getFrequencyData();
 				// sphere.rotation.x += 50;
@@ -1151,6 +1147,9 @@ vec4 mod289(vec4 x) {
 				// camera.rotation.y += 0.13 * ( target.x - camera.rotation.y );
 
 				uniforms2.time.value += clock.getDelta();
+				
+				
+			//console.log(delta)
 			
 			//	if(analyser)	sizeVal = Math.max(...analyser.data) / 80;
 			//if(analyser)	sizeVal = analyser.data;
@@ -1162,28 +1161,42 @@ vec4 mod289(vec4 x) {
 				
 
 
-				if(sizeVal > 4.7){
+				if(sizeVal > 5.1){
 			
-			// uniforms4.color1.value = new THREE.Color(0xff2596);
-			// uniforms4.color2.value = new THREE.Color(0x57063d);
-					uniforms3.color1.value = new THREE.Color(0xFFD225 );
+			uniforms5.color1.value = new THREE.Color(0xbacb32);
+			uniforms5.color2.value = new THREE.Color(0x758400);
+					uniforms3.color1.value = new THREE.Color(0xfdcf18 );
+			uniforms3.color2.value = new THREE.Color(0xff760f);
+		}
+		else	if(sizeVal < 4.9 && sizeVal > 4.8){
+			
+			uniforms4.color1.value = new THREE.Color(0xf49cb8);
+			uniforms4.color2.value = new THREE.Color(0xe63296);
+			// 		uniforms3.color1.value = new THREE.Color(0xfdcf18 );
+			// uniforms3.color2.value = new THREE.Color(0xff760f);
+		}
+		else	if(sizeVal < 4.4 && sizeVal > 4.1){
+			
+			uniforms5.color1.value = new THREE.Color(0xbacb32);
+			uniforms5.color2.value = new THREE.Color(0x758400);
+					uniforms3.color1.value = new THREE.Color(0xfdcf18 );
 			uniforms3.color2.value = new THREE.Color(0xff760f);
 		}
 
-			else	if(sizeVal < 4.1 && sizeVal > 4.4){
+		// 	else	if(sizeVal < 4.1 && sizeVal > 4.2){
 			
-			// uniforms4.color1.value = new THREE.Color(0xff2596);
-			// uniforms4.color2.value = new THREE.Color(0x57063d);
-					uniforms3.color1.value = new THREE.Color(0xFFD225 );
-			uniforms3.color2.value = new THREE.Color(0xff760f);
-		}
+		// 	// uniforms4.color1.value = new THREE.Color(0xf49cb8);
+		// 	// uniforms4.color2.value = new THREE.Color(0xe63296);
+		// 			uniforms3.color1.value = new THREE.Color(0xfdcf18 );
+		// 	uniforms3.color2.value = new THREE.Color(0xff760f);
+		// }
 
 
 			else if(sizeVal < 3.8 && sizeVal > 3.5){
 			
-			// uniforms4.color1.value = new THREE.Color(0xff2596);
-			// uniforms4.color2.value = new THREE.Color(0x57063d);
-					uniforms3.color1.value = new THREE.Color(0xFFD225 );
+			uniforms4.color1.value = new THREE.Color(0xf49cb8);
+			uniforms4.color2.value = new THREE.Color(0xe63296);
+					uniforms3.color1.value = new THREE.Color(0xfdcf18 );
 			uniforms3.color2.value = new THREE.Color(0xff760f);
 		}
 
@@ -1195,62 +1208,65 @@ vec4 mod289(vec4 x) {
 		
 		else if(sizeVal < 3.18 && sizeVal > 3.15){
 			
-			// uniforms4.color1.value = new THREE.Color(0xff2596);
-			// uniforms4.color2.value = new THREE.Color(0x57063d);
-					uniforms3.color1.value = new THREE.Color(0xFFD225 );
+			uniforms5.color1.value = new THREE.Color(0xbacb32);
+			uniforms5.color2.value = new THREE.Color(0x758400);
+					uniforms3.color1.value = new THREE.Color(0xfdcf18 );
 			uniforms3.color2.value = new THREE.Color(0xff760f);
 		}
 
 			else	if(sizeVal < 2.9 && sizeVal > 2.8){
 			
-					uniforms4.color1.value = new THREE.Color(0xff2596);
-					uniforms4.color2.value = new THREE.Color(0x57063d);
-							uniforms3.color1.value = new THREE.Color(0xFFD225 );
+					uniforms4.color1.value = new THREE.Color(0xf49cb8);
+					uniforms4.color2.value = new THREE.Color(0xe63296);
+							uniforms3.color1.value = new THREE.Color(0xfdcf18 );
 					uniforms3.color2.value = new THREE.Color(0xff760f);
 				} 
 				
 		
 			else if(sizeVal < 2.3 && sizeVal > 2.1){
-				uniforms3.color1.value = new THREE.Color(0xFFD225 );
+				uniforms3.color1.value = new THREE.Color(0xfdcf18 );
 					uniforms3.color2.value = new THREE.Color(0xff760f);
-				
+					uniforms5.color1.value = new THREE.Color(0xbacb32);
+			uniforms5.color2.value = new THREE.Color(0x758400);
 					
 				}
 				else if(sizeVal < 1.9 && sizeVal > 1.8){
-					uniforms4.color1.value = new THREE.Color(0xff2596);
-					uniforms4.color2.value = new THREE.Color(0x57063d);
-					// 		uniforms3.color1.value = new THREE.Color(0xFFD225 );
-					// uniforms3.color2.value = new THREE.Color(0xff760f);
+					uniforms4.color1.value = new THREE.Color(0xf49cb8);
+					uniforms4.color2.value = new THREE.Color(0xe63296);
+					uniforms5.color1.value = new THREE.Color(0xbacb32);
+			uniforms5.color2.value = new THREE.Color(0x758400);
 				}
 				
 			
 
 				else if(sizeVal < 1.5 && sizeVal > 1.4){
-					uniforms4.color1.value = new THREE.Color(0xff2596);
-					uniforms4.color2.value = new THREE.Color(0x57063d);
-					// 		uniforms3.color1.value = new THREE.Color(0xFFD225 );
+					uniforms4.color1.value = new THREE.Color(0xf49cb8);
+					uniforms4.color2.value = new THREE.Color(0xe63296);
+					// 		uniforms3.color1.value = new THREE.Color(0xfdcf18 );
 					// uniforms3.color2.value = new THREE.Color(0xff760f);
+					uniforms5.color1.value = new THREE.Color(0xbacb32);
+			uniforms5.color2.value = new THREE.Color(0x758400);
 				}
 
 			
 				else if(sizeVal < 0.8 && sizeVal > 0.7){
-					uniforms4.color1.value = new THREE.Color(0xff2596);
-					uniforms4.color2.value = new THREE.Color(0x57063d);
-					// 		uniforms3.color1.value = new THREE.Color(0xFFD225 );
+					uniforms4.color1.value = new THREE.Color(0xf49cb8);
+					uniforms4.color2.value = new THREE.Color(0xe63296);
+					// 		uniforms3.color1.value = new THREE.Color(0xfdcf18 );
 					// uniforms3.color2.value = new THREE.Color(0xff760f);
 				}
 
 				else if(sizeVal < 0.3 && sizeVal > 0.2){
-					uniforms4.color1.value = new THREE.Color(0xff2596);
-					uniforms4.color2.value = new THREE.Color(0x57063d);
-					// 		uniforms3.color1.value = new THREE.Color(0xFFD225 );
+					uniforms4.color1.value = new THREE.Color(0xf49cb8);
+					uniforms4.color2.value = new THREE.Color(0xe63296);
+					// 		uniforms3.color1.value = new THREE.Color(0xfdcf18 );
 					// uniforms3.color2.value = new THREE.Color(0xff760f);
 				}
 
 				else if(sizeVal < 0.0 && sizeVal > 0.03){
-					uniforms4.color1.value = new THREE.Color(0xff2596);
-					uniforms4.color2.value = new THREE.Color(0x57063d);
-					// 		uniforms3.color1.value = new THREE.Color(0xFFD225 );
+					uniforms4.color1.value = new THREE.Color(0xf49cb8);
+					uniforms4.color2.value = new THREE.Color(0xe63296);
+					// 		uniforms3.color1.value = new THREE.Color(0xfdcf18 );
 					// uniforms3.color2.value = new THREE.Color(0xff760f);
 				}
 
@@ -1266,11 +1282,11 @@ vec4 mod289(vec4 x) {
 				
 				else{
 					gsap.to(uniforms4.color1.value, {
-						duration: 0.7,
+						duration: 0.6,
 						// value: new THREE.Color(0x5c5c5c),
-						r: 0.376,
-						g: 0.294,
-						b: 0.412,
+						r: 1.,
+						g: 1.,
+						b: 1.,
 					
 						onUpdate: function() {
 					// camera.updateProjectionMatrix;
@@ -1281,10 +1297,10 @@ vec4 mod289(vec4 x) {
 					})
 
 					gsap.to(uniforms4.color2.value, {
-						duration: 0.7,
-						r: 0.169,
-						g: 0.169,
-						b: 0.169,
+						duration: 0.6,
+						r: 0.675,
+						g: 0.675,
+						b: 0.675,
 					
 						onUpdate: function() {
 					// camera.updateProjectionMatrix;
@@ -1295,10 +1311,10 @@ vec4 mod289(vec4 x) {
 					})
 
 					gsap.to(uniforms3.color1.value, {
-						duration: 0.7,
-						r: 0.361,
-						g: 0.361,
-						b: 0.02,
+						duration: 0.6,
+						r: 1.,
+						g: 1.,
+						b: 1.,
 					
 						onUpdate: function() {
 					// camera.updateProjectionMatrix;
@@ -1309,10 +1325,41 @@ vec4 mod289(vec4 x) {
 					})
 
 					gsap.to(uniforms3.color2.value, {
-						duration: 0.7,
-						r: 0.169,
-						g: 0.169,
-						b: 0.169,
+						duration: 0.6,
+						r: 0.675,
+						g: 0.675,
+						b: 0.675,
+					
+						onUpdate: function() {
+					// camera.updateProjectionMatrix;
+					// controls.update();
+					
+					}
+										
+					})
+
+
+
+
+					gsap.to(uniforms5.color1.value, {
+						duration: 0.6,
+						r: 1.,
+						g: 1.,
+						b: 1.,
+					
+						onUpdate: function() {
+					// camera.updateProjectionMatrix;
+					// controls.update();
+					
+					}
+										
+					})
+
+					gsap.to(uniforms5.color2.value, {
+						duration: 0.6,
+						r: 0.675,
+						g: 0.675,
+						b: 0.675,
 					
 						onUpdate: function() {
 					// camera.updateProjectionMatrix;
@@ -1322,124 +1369,15 @@ vec4 mod289(vec4 x) {
 										
 					})
 		
+		
 
 
 
 
-					// uniforms4.color1.value = new THREE.Color(0x5c5c5c);
-					// uniforms4.color2.value = new THREE.Color(0x2b2b2b);
-						// uniforms3.color1.value = new THREE.Color(0x5c5c5c);
-					// uniforms3.color2.value = new THREE.Color(0x2b2b2b);
+		
 				}
 
-				// setInterval(() => {
-				// 	gsap.to(uniforms2.color1.value, {
-				// 		duration: 1.8,
-				// 		r: 0.655,
-				// 		g: 0.,
-				// 		b: 0.455,
-					
-					
-				// 		onUpdate: function() {
-				// 	// camera.updateProjectionMatrix;
-				// 	// controls.update();
-					
-				// 	}
-										
-				// 	})
-
-				// 	gsap.to(uniforms2.color2.value, {
-				// 		duration: 1.8,
-				// 		r: 0.,
-				// 		g: 0.157,
-				// 		b: 0.294,
-					
-				// 		onUpdate: function() {
-				// 	// camera.updateProjectionMatrix;
-				// 	// controls.update();
-					
-				// 	}
-										
-				// 	})
-				// }, 2000);
-
-				// setInterval(() => {
-				// 	gsap.to(uniforms2.color1.value, {
-				// 		duration: 1.8,
-				// 					r: 0.145,
-				// 		g: 0.137,
-				// 		b: 0.91,
-					
-					
-				// 		onUpdate: function() {
-				// 	// camera.updateProjectionMatrix;
-				// 	// controls.update();
-					
-				// 	}
-										
-				// 	})
-
-				// 	gsap.to(uniforms2.color2.value, {
-				// 		duration: 1.8,
-				// 				r: 1.000,
-				// 		g: 0.831,
-				// 		b: 0.224,
-					
-				// 		onUpdate: function() {
-				// 	// camera.updateProjectionMatrix;
-				// 	// controls.update();
-					
-				// 	}
-										
-				// 	})
-				// }, 3000);
-
-
-
-				
-				// if(sizeVal < 3.4 && sizeVal > 2.4){
-					
-				// 			uniforms2.color1.value = new THREE.Color(0xe62aec );
-				// 	uniforms2.color2.value = new THREE.Color(0x51a7d9);
-					
-				// } 
-				// else if(sizeVal < 2.1 && sizeVal > 1.6){
-					
-				// 			uniforms2.color1.value = new THREE.Color(0xa70074 );
-				// 	uniforms2.color2.value = new THREE.Color(0x00284b);
-					
-				// } 
-			
-				// else {
-				// 				gsap.to(uniforms2.color1.value, {
-				// 		duration: 1.8,
-				// 		r: 0.145,
-				// 		g: 0.137,
-				// 		b: 0.91,
-					
-					
-				// 		onUpdate: function() {
-				// 	// camera.updateProjectionMatrix;
-				// 	// controls.update();
-					
-				// 	}
-										
-				// 	})
-
-				// 	gsap.to(uniforms2.color2.value, {
-				// 		duration: 1.8,
-				// 		r: 1.000,
-				// 		g: 0.831,
-				// 		b: 0.224,
-					
-				// 		onUpdate: function() {
-				// 	// camera.updateProjectionMatrix;
-				// 	// controls.update();
-					
-				// 	}
-										
-				// 	})
-				// }
+		
 
 			
 				
