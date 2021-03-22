@@ -34,6 +34,10 @@
 			varying vec3 vNormal;
 			uniform float time;
 			uniform vec2 u_mouse;
+			uniform sampler2D bgone;
+			uniform sampler2D bgtwo;
+			uniform sampler2D bgthree;
+			uniform float transition;
 			//uniform vec3 color1;
 		//	uniform vec3 color2;
 			
@@ -93,9 +97,18 @@
 				
 				vec3 tmp = mix(colorMix1, colorMix2, pct);
 
-
-				gl_FragColor = vec4(mix(colorMix1, colorMix2, pct), 1.0);
+				vec4 custombg = texture2D(bgone, vUv);
+				vec4 custombg2 = texture2D(bgtwo, vUv);
+				vec4 custombg3 = texture2D(bgthree, vUv);
+				//custombg.r = texture2D(vUv.y);
+				vec4 finalColor = mix(custombg, custombg2, transition);
+				//gl_FragColor = vec4(mix(colorMix1, colorMix2, pct), 1.0);
 				//gl_FragColor = vec4(mix(tmp, colorMix3, pct), 1.0);
+			
+				//finalColor.x = (custombg.x*pct + custombg2.x*pct + custombg3.x*pct)/1.;
+			//	finalColor.y = (custombg.y*pct + custombg2.y*pct + custombg3.y*pct)/1.;
+				//finalColor.z = (custombg.z*pct + custombg2.z*pct + custombg3.z*pct)/1.;
+				gl_FragColor = finalColor;
 				
 			}
 		  </script>
@@ -341,9 +354,13 @@
 			let sizeVal = 0;
 			let textureCube;
 			let mixer;
+			let mesh2;
+			let texturedarkpurple;
+			let texturedarkyellow, texturedarkblue;
 			const bloomLayer = new THREE.Layers();
 			bloomLayer.set( BLOOM_SCENE );
 			let sphere;
+			let bgtextures;
 			let movableObjs = [];
 			let uniforms2, uniforms3, uniforms4, sphere_a, helper, helper2, uniforms5, sphere_b;
 			let bottle2, bottle3, orbit, pointlight3, mediaElement, directionalLight2, directionalLight1, directionalLight3, directionalLight4, helper3, helper4;
@@ -373,9 +390,9 @@
 			const scene = new THREE.Scene();
 
 			const camera = new THREE.PerspectiveCamera( 40, window.innerWidth / window.innerHeight, 1, 200 );
-			// camera.position.set( 0, 0, 20 );
-			camera.position.set(0, 0.6, -28);
-			camera.position.z = 25;
+		
+			//camera.position.set(0, 0.6, -28);
+			//camera.position.z = 25;
 		//	camera.lookAt( 0, 0, 0 );
 
 			const controls = new OrbitControls( camera, renderer.domElement );
@@ -827,11 +844,31 @@
 				
 
 				// aq 80, 80, 200 iyo
+				var textureloader666 = new THREE.TextureLoader();
 				var geometryplane = new THREE.SphereGeometry(25, 25, 200);
+				texturedarkblue = textureloader666.load('./darkblue.jpg')
+   				texturedarkyellow = textureloader666.load('./darkyellow.jpg')
+   				texturedarkpurple = textureloader666.load('./darkpurple.jpg')
 
+				   let manager = new THREE.LoadingManager();
+					manager.onLoad = () => {
+						startSequence();
+					}
+
+					let tLoader = new THREE.TextureLoader(manager);
+					bgtextures = [
+						tLoader.load("./darkblue.jpg"),
+					tLoader.load("./darkyellow.jpg"),
+					tLoader.load("./darkpurple.jpg"),
+					
+					];
 						uniforms2 = {
 						time: {value: 0},
 						u_mouse: { type: "v2", value: new THREE.Vector2() },
+						bgone: {value: bgtextures[0]},
+						bgtwo: {value: bgtextures[0]},
+						transition: {value: 0},
+						bgthree: {value: texturedarkpurple},
 						// color1: { type: "c", value: new THREE.Color(0xbacb32)  },
 						// color2: { type: "c", value: new THREE.Color(0x758400)  },
 						};
@@ -844,8 +881,36 @@
 						fragmentShader: document.getElementById("fragmentShader2").textContent,
 						});
 
-						var mesh2 = new THREE.Mesh(geometryplane, materialplane);
+						mesh2 = new THREE.Mesh(geometryplane, materialplane);
 						scene.add(mesh2);
+
+						console.log(mesh2)
+
+						let counter = 0;
+
+						function startSequence(){
+						gsap.fromTo(materialplane.uniforms.transition, 
+					{value: 0}, 
+					{value: 1, 
+					duration: 2, 
+					repeat: -1,
+					repeatRefresh: true,
+					onRepeat: () => {
+						let idx1 = counter % 3;
+						let idx2 = (idx1 + 1) == 3 ? 0 : idx1 + 1;
+						console.log(counter, idx1, idx2);
+						counter++;
+						materialplane.uniforms.bgone.value = bgtextures[idx1];
+						materialplane.uniforms.bgtwo.value = bgtextures[idx2];
+					}
+					})
+					}
+
+
+
+
+
+
 						const light = new THREE.AmbientLight( 0xffffff); // soft white light
 						scene.add( light );
 
@@ -976,6 +1041,7 @@ const cubeloader = new THREE.CubeTextureLoader();
 								camera.position.set(-17.697619093236263, -3.4965541132930738, 0);
 								//camera.lookAt(bottle2.position);
 							//controls.target.copy( bottle2.position );
+							camera.updateProjectionMatrix();
 							controls.target.set( 7.8, -2.2, 0 );
 								controls.update();
 								// console.log(bottle2)
@@ -1380,7 +1446,21 @@ const cubeloader = new THREE.CubeTextureLoader();
 
 		
 
-			
+				
+				// gsap.to(mesh2.material.uniforms.bgone, {
+				// 	// repeat: -1,
+				// 		duration: 0.5,
+				// 		value: texturedarkyellow,
+					
+				// 		onUpdate: function() {
+				// 	// camera.updateProjectionMatrix;
+				// 	// controls.update();
+				// 	mesh2.material.uniforms.bgone.needsUpdate = true;
+					
+				// 	}
+										
+				// 	})
+		
 				
 				controls.update();
 				render();
